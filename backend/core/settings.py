@@ -23,6 +23,10 @@ env = environ.Env()
 SECRET_KEY = env('SECRET_KEY')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 DEBUG = env.bool('DEBUG', default=False)
+TWITCH_API_URL = env('TWITCH_API_URL')
+TWITCH_API_TOKEN_URL = env('TWITCH_API_TOKEN_URL')
+TWITCH_API_CLIENT_SECRET = env('TWITCH_API_CLIENT_SECRET')
+TWITCH_API_CLIENT_ID = env('TWITCH_API_CLIENT_ID')
 
 # Application definition
 
