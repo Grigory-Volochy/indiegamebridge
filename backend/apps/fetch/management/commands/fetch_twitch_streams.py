@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from core.utils.twitch_client import TwitchClient
+from core.utils.twitch_api_client import TwitchApiClient
 
 
 class Command(BaseCommand):
@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
             # Fetch streams
             response_streams = []
-            with TwitchClient() as client:
+            with TwitchApiClient() as client:
                 response_streams = list(client.iter_streams(game_ids=game_ids))
 
             # TODO: insert/update into streams table

@@ -10,8 +10,13 @@ Early development. No usable build yet.
 
 ## Tech Stack
 
-- **Backend:** Python, Django, PostgreSQL
-- **Data sources:** Twitch Helix API; additional platforms under consideration
+- **Backend:**
+Python, Django, PostgreSQL
+
+- **Data sources:**
+Twitch Helix API: https://dev.twitch.tv/docs/api/reference/
+IGDB API: https://api-docs.igdb.com/
+additional platforms under consideration
 
 ## License
 

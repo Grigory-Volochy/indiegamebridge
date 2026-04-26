@@ -1,24 +1,28 @@
-"""Twitch Client."""
+"""Shared Twitch OAuth and retrying HTTP client.
+
+Both the Twitch Helix and IGDB API clients use this as a base, since IGDB
+authenticates with the same Twitch app credentials.
+"""
 
 import logging
 import time
-import httpx
 
+import httpx
 from django.conf import settings
+
 
 logger = logging.getLogger(__name__)
 
-_TOKEN_REFRESH_MARGIN_SECONDS = 60
-_DEFAULT_PAGE_SIZE = 100
-_TWITCH_API_URL = "https://api.twitch.tv/helix"
 _TWITCH_API_TOKEN_URL = "https://id.twitch.tv/oauth2/token"
+_TOKEN_REFRESH_MARGIN_SECONDS = 60
 _MAX_REQUEST_ATTEMPTS = 3
 _BACKOFF_BASE_SECONDS = 1.0
 _RETRY_AFTER_CAP_SECONDS = 60.0
 _RETRYABLE_STATUSES = {500, 502, 503, 504}
 
 
-class TwitchClient:
+class TwitchApiBaseClient:
+    """Owns the OAuth token lifecycle and a retrying HTTP client."""
 
     def __init__(self):
         self._token = None
@@ -88,23 +92,6 @@ class TwitchClient:
 
         resp.raise_for_status()
         return resp
-
-    def get_streams(self, game_ids, first=_DEFAULT_PAGE_SIZE, after=None):
-        params = {"game_id": game_ids, "first": first}
-        if after:
-            params["after"] = after
-        resp = self._request("GET", f"{_TWITCH_API_URL}/streams", params=params)
-        return resp.json()
-
-    def iter_streams(self, game_ids):
-        cursor = None
-        while True:
-            # TODO: handle case when there are more than 100 game IDs - Helix only allows up to 100 game IDs per request
-            data = self.get_streams(game_ids, after=cursor)
-            yield from data["data"]
-            cursor = data.get("pagination", {}).get("cursor")
-            if not cursor:
-                break
 
     def close(self):
         if self._client and not self._client.is_closed:
