@@ -1,8 +1,21 @@
 """Twitch Client."""
 
-import httpx
+import logging
 import time
+import httpx
+
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+_TOKEN_REFRESH_MARGIN_SECONDS = 60
+_DEFAULT_PAGE_SIZE = 100
+_TWITCH_API_URL = "https://api.twitch.tv/helix"
+_TWITCH_API_TOKEN_URL = "https://id.twitch.tv/oauth2/token"
+_MAX_REQUEST_ATTEMPTS = 3
+_BACKOFF_BASE_SECONDS = 1.0
+_RETRY_AFTER_CAP_SECONDS = 60.0
+_RETRYABLE_STATUSES = {500, 502, 503, 504}
 
 
 class TwitchClient:
@@ -13,9 +26,10 @@ class TwitchClient:
         self._client = httpx.Client(timeout=20)
 
     def _ensure_token(self):
-        if self._token and time.time() < self._token_expires_at - 60:
+        if self._token and time.time() < self._token_expires_at - _TOKEN_REFRESH_MARGIN_SECONDS:
             return
-        resp = self._client.post(settings.TWITCH_API_TOKEN_URL, params={
+        logger.debug("Refreshing Twitch app token")
+        resp = self._client.post(_TWITCH_API_TOKEN_URL, params={
             "client_id": settings.TWITCH_API_CLIENT_ID,
             "client_secret": settings.TWITCH_API_CLIENT_SECRET,
             "grant_type": "client_credentials",
@@ -24,6 +38,7 @@ class TwitchClient:
         data = resp.json()
         self._token = data["access_token"]
         self._token_expires_at = time.time() + data["expires_in"]
+        logger.debug("Twitch token refreshed; expires in %ss", data["expires_in"])
 
     def _headers(self):
         self._ensure_token()
@@ -32,12 +47,53 @@ class TwitchClient:
             "Authorization": f"Bearer {self._token}",
         }
 
-    def get_streams(self, game_ids, first=100, after=None):
+    def _request(self, method, url, **kwargs):
+        for attempt in range(_MAX_REQUEST_ATTEMPTS):
+            is_last_attempt = attempt == _MAX_REQUEST_ATTEMPTS - 1
+            try:
+                resp = self._client.request(method, url, headers=self._headers(), **kwargs)
+            except httpx.TransportError as e:
+                if is_last_attempt:
+                    raise
+                backoff = _BACKOFF_BASE_SECONDS * (2 ** attempt)
+                logger.warning("Twitch request failed (%s); backing off %.1fs before retry", type(e).__name__, backoff)
+                time.sleep(backoff)
+                continue
+
+            # 401 only triggers a token refresh on the first attempt; a second 401
+            # after a fresh token means a deeper auth problem, so stop retrying.
+            if resp.status_code == 401 and attempt == 0:
+                logger.warning("Twitch returned 401; refreshing token and retrying")
+                self._token = None
+                continue
+
+            if resp.status_code == 429 and not is_last_attempt:
+                try:
+                    retry_after = float(resp.headers.get("Retry-After", "1"))
+                except ValueError:
+                    retry_after = 1.0
+                retry_after = min(retry_after, _RETRY_AFTER_CAP_SECONDS)
+                logger.warning("Twitch rate limited; sleeping %.1fs before retry", retry_after)
+                time.sleep(retry_after)
+                continue
+
+            if resp.status_code in _RETRYABLE_STATUSES and not is_last_attempt:
+                backoff = _BACKOFF_BASE_SECONDS * (2 ** attempt)
+                logger.warning("Twitch returned %d; backing off %.1fs before retry", resp.status_code, backoff)
+                time.sleep(backoff)
+                continue
+
+            resp.raise_for_status()
+            return resp
+
+        resp.raise_for_status()
+        return resp
+
+    def get_streams(self, game_ids, first=_DEFAULT_PAGE_SIZE, after=None):
         params = {"game_id": game_ids, "first": first}
         if after:
             params["after"] = after
-        resp = self._client.get(f"{settings.TWITCH_API_URL}/streams", params=params, headers=self._headers())
-        resp.raise_for_status()
+        resp = self._request("GET", f"{_TWITCH_API_URL}/streams", params=params)
         return resp.json()
 
     def iter_streams(self, game_ids):
