@@ -14,15 +14,21 @@ from pathlib import Path
 import environ
 import os
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Initialize environment variables
 environ.Env.read_env(os.path.join(BASE_DIR.parent, '.env'))
 env = environ.Env()
 
+# Django security variables
 SECRET_KEY = env('SECRET_KEY')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+
+# Django debug variables
 DEBUG = env.bool('DEBUG', default=False)
+
+# Twitch API variables
 TWITCH_API_CLIENT_SECRET = env('TWITCH_API_CLIENT_SECRET')
 TWITCH_API_CLIENT_ID = env('TWITCH_API_CLIENT_ID')
 

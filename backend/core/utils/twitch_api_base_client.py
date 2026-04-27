@@ -52,10 +52,14 @@ class TwitchApiBaseClient:
         }
 
     def _request(self, method, url, **kwargs):
+        extra_headers = kwargs.pop("headers", None)
         for attempt in range(_MAX_REQUEST_ATTEMPTS):
             is_last_attempt = attempt == _MAX_REQUEST_ATTEMPTS - 1
+            headers = self._headers()
+            if extra_headers:
+                headers.update(extra_headers)
             try:
-                resp = self._client.request(method, url, headers=self._headers(), **kwargs)
+                resp = self._client.request(method, url, headers=headers, **kwargs)
             except httpx.TransportError as e:
                 if is_last_attempt:
                     raise

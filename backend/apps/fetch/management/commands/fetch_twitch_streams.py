@@ -17,7 +17,6 @@ class Command(BaseCommand):
                 return
 
             # Fetch streams
-            response_streams = []
             with TwitchApiClient() as client:
                 response_streams = list(client.iter_streams(game_ids=game_ids))
 

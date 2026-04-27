@@ -1,0 +1,902 @@
+[
+  {
+    "id": 363578,
+    "alternative_names": [
+      225723
+    ],
+    "artworks": [
+      192989,
+      192990
+    ],
+    "cover": 485354,
+    "created_at": 1756244300,
+    "external_games": [
+      3093479,
+      3079788
+    ],
+    "first_release_date": 1754265600,
+    "game_modes": [
+      1
+    ],
+    "genres": [
+      32
+    ],
+    "keywords": [
+      23970,
+      24895,
+      38148,
+      46257,
+      48693,
+      49539,
+      49617
+    ],
+    "name": "Pica",
+    "platforms": [
+      6
+    ],
+    "release_dates": [
+      792047
+    ],
+    "screenshots": [
+      1629652,
+      1629654,
+      1629651,
+      1629650,
+      1629653
+    ],
+    "similar_games": [
+      363576,
+      363590,
+      359155,
+      363591,
+      366325,
+      366290,
+      366289,
+      364131,
+      364128,
+      364113
+    ],
+    "slug": "pica",
+    "summary": "This is a casual jigsaw puzzle game. All you need to do is use the mouse to drag the pieces to the correct positions, and when you complete the puzzle and form a complete picture, you can unlock the picture gallery.",
+    "tags": [
+      268435488,
+      536894882,
+      536895807,
+      536909060,
+      536917169,
+      536919605,
+      536920451,
+      536920529
+    ],
+    "updated_at": 1770881319,
+    "url": "https://www.igdb.com/games/pica",
+    "websites": [
+      863506,
+      863505
+    ],
+    "checksum": "e91c9bdd-9d34-3302-e3ca-b75fc6a8d395",
+    "language_supports": [
+      1362820,
+      1362821,
+      1362822,
+      1362823,
+      1362824,
+      1362825,
+      1362826,
+      1362827,
+      1362801,
+      1362802,
+      1362803,
+      1362804,
+      1362805,
+      1362806,
+      1362807,
+      1362808,
+      1362809,
+      1362810,
+      1362811,
+      1362812,
+      1362813,
+      1362814,
+      1362815,
+      1362816,
+      1362817,
+      1362818,
+      1362819
+    ],
+    "game_type": 0
+  },
+  {
+    "id": 344599,
+    "artworks": [
+      167994
+    ],
+    "cover": 459068,
+    "created_at": 1747890900,
+    "external_games": [
+      3062849,
+      2999739
+    ],
+    "first_release_date": 1750204800,
+    "game_modes": [
+      1
+    ],
+    "genres": [
+      32
+    ],
+    "name": "Dungeon Drops",
+    "platforms": [
+      6
+    ],
+    "release_dates": [
+      743839
+    ],
+    "screenshots": [
+      1535135,
+      1535141,
+      1535148,
+      1535152,
+      1535160
+    ],
+    "similar_games": [
+      113895,
+      105233,
+      111130,
+      32902,
+      119121,
+      40524,
+      106987,
+      37419,
+      28309,
+      43367
+    ],
+    "slug": "dungeon-drops",
+    "summary": "Jump, fight and climb your way out of the ever-changing depths of the Snake Castle in Dungeon Drops!",
+    "tags": [
+      1,
+      268435488
+    ],
+    "themes": [
+      1
+    ],
+    "updated_at": 1771132041,
+    "url": "https://www.igdb.com/games/dungeon-drops",
+    "websites": [
+      818896,
+      795582,
+      795621,
+      818894,
+      818893,
+      818895
+    ],
+    "checksum": "d9799e4f-f61d-9077-58d0-cfa53ddf2307",
+    "language_supports": [
+      1247471,
+      1247472,
+      1247473,
+      1247474,
+      1247475,
+      1247476,
+      1247477,
+      1247478,
+      1247479,
+      1247480,
+      1247481,
+      1247483,
+      1247486,
+      1247484,
+      1247485,
+      1247488,
+      1247489,
+      1247490,
+      1247491,
+      1247492,
+      1247493,
+      1247494,
+      1247495,
+      1247496,
+      1247487,
+      1247482
+    ],
+    "game_type": 0
+  },
+  {
+    "id": 296966,
+    "alternative_names": [
+      238806
+    ],
+    "artworks": [
+      135143
+    ],
+    "cover": 376443,
+    "created_at": 1712798372,
+    "external_games": [
+      2905964,
+      2880748
+    ],
+    "first_release_date": 1709164800,
+    "game_modes": [
+      1
+    ],
+    "genres": [
+      32
+    ],
+    "name": "Machine Runaway",
+    "platforms": [
+      6
+    ],
+    "release_dates": [
+      680712
+    ],
+    "screenshots": [
+      1300202,
+      1300203,
+      1300204,
+      1300205,
+      1300206,
+      1300207
+    ],
+    "similar_games": [
+      113895,
+      105233,
+      111130,
+      32902,
+      119121,
+      40524,
+      106987,
+      37419,
+      28309,
+      43367
+    ],
+    "slug": "machine-runaway",
+    "summary": "MACHINE RUNAWAY is a third-person shooter game where you aim from 200 floors underground to the surface. The protagonist can transform into enemy characters. Make full use of the abilities of various enemy characters to advance the game to your advantage.",
+    "tags": [
+      1,
+      268435488
+    ],
+    "themes": [
+      1
+    ],
+    "updated_at": 1776342296,
+    "url": "https://www.igdb.com/games/machine-runaway",
+    "websites": [
+      629858
+    ],
+    "checksum": "44657c81-c650-b709-0ecf-0182dbf3466a",
+    "language_supports": [
+      972879,
+      972880,
+      972881,
+      972882,
+      972883,
+      972884,
+      972885,
+      972886,
+      972887,
+      972888
+    ],
+    "game_type": 0
+  },
+  {
+    "id": 362759,
+    "alternative_names": [
+      183185
+    ],
+    "artworks": [
+      189952,
+      189953
+    ],
+    "cover": 481942,
+    "created_at": 1755967070,
+    "external_games": [
+      3092831,
+      3073856
+    ],
+    "first_release_date": 1758672000,
+    "game_modes": [
+      1
+    ],
+    "genres": [
+      32
+    ],
+    "involved_companies": [
+      339053
+    ],
+    "keywords": [
+      101,
+      126,
+      288,
+      894,
+      1111,
+      1387,
+      1403,
+      1697,
+      1705,
+      2084,
+      2760,
+      3138,
+      4138,
+      24685,
+      43527,
+      44868
+    ],
+    "name": "Retro Meadow",
+    "platforms": [
+      6
+    ],
+    "player_perspectives": [
+      3
+    ],
+    "release_dates": [
+      812053,
+      793776
+    ],
+    "screenshots": [
+      1618835,
+      1618836,
+      1618837
+    ],
+    "similar_games": [
+      43165,
+      26226,
+      3212,
+      10776,
+      354880,
+      37419,
+      18182,
+      55042,
+      350204,
+      213941
+    ],
+    "slug": "retro-meadow",
+    "summary": "A pixel-art sandbox where you design infinite maps. Build your perfect world with retro designs. No simulation, no action - just cozy construction. What unique worlds will you create with cute pixels? Turn your visions into peaceful creations.",
+    "tags": [
+      33,
+      268435488,
+      536871013,
+      536871038,
+      536871200,
+      536871806,
+      536872023,
+      536872299,
+      536872315,
+      536872609,
+      536872617,
+      536872996,
+      536873672,
+      536874050,
+      536875050,
+      536895597,
+      536914439,
+      536915780
+    ],
+    "themes": [
+      33
+    ],
+    "updated_at": 1773551723,
+    "url": "https://www.igdb.com/games/retro-meadow",
+    "videos": [
+      160173
+    ],
+    "websites": [
+      856545,
+      857079
+    ],
+    "checksum": "31b8d359-b2ac-ce98-31f8-9f88cb18e6ba",
+    "language_supports": [
+      1354216,
+      1354224,
+      1354225,
+      1354226,
+      1354227,
+      1354228,
+      1354229,
+      1354238,
+      1354239,
+      1354240,
+      1354241,
+      1354230,
+      1354232,
+      1354234,
+      1354235,
+      1354236,
+      1354217,
+      1354218,
+      1354219,
+      1354220,
+      1354221,
+      1354222,
+      1354223,
+      1354231,
+      1354233,
+      1354237
+    ],
+    "game_type": 0
+  },
+  {
+    "id": 333640,
+    "alternative_names": [
+      253156
+    ],
+    "artworks": [
+      155556
+    ],
+    "cover": 441591,
+    "created_at": 1740693131,
+    "external_games": [
+      2987807,
+      2969026
+    ],
+    "first_release_date": 1745884800,
+    "game_modes": [
+      1
+    ],
+    "genres": [
+      32
+    ],
+    "name": "Spooky Survivors",
+    "platforms": [
+      6
+    ],
+    "release_dates": [
+      725997
+    ],
+    "screenshots": [
+      1471970,
+      1471972,
+      1471973,
+      1471971,
+      1471976,
+      1471974,
+      1471975,
+      1471977,
+      1471978,
+      1471979,
+      1471980,
+      1471981,
+      1471982,
+      1471983,
+      1471984,
+      1471985,
+      1471986,
+      1471987,
+      1471988,
+      1471989
+    ],
+    "similar_games": [
+      113895,
+      105233,
+      111130,
+      32902,
+      119121,
+      40524,
+      106987,
+      37419,
+      28309,
+      43367
+    ],
+    "slug": "spooky-survivors",
+    "summary": "Spooky Survivors puts you in the shoes of Van Hobo, a quirky hero battling the supernatural! Start with all unlocks BUT choose which to level up as you face endless waves. Equip powerful gear and unlock unique abilities. Outlast the nightmare and prove yourself as the ultimate spooky survivor!",
+    "tags": [
+      1,
+      268435488
+    ],
+    "themes": [
+      1
+    ],
+    "updated_at": 1775985578,
+    "url": "https://www.igdb.com/games/spooky-survivors",
+    "websites": [
+      733958,
+      715252,
+      715253,
+      715250,
+      715254,
+      715251
+    ],
+    "checksum": "9356c4d7-a5e9-c10e-543b-ecd258cb5c86",
+    "language_supports": [
+      1172439,
+      1172441
+    ],
+    "game_type": 0
+  },
+  {
+    "id": 399315,
+    "artworks": [
+      269162,
+      269163
+    ],
+    "cover": 558576,
+    "created_at": 1777027862,
+    "external_games": [
+      3168101,
+      3168197
+    ],
+    "first_release_date": 1790726400,
+    "game_modes": [
+      1
+    ],
+    "genres": [
+      32
+    ],
+    "involved_companies": [
+      382861
+    ],
+    "name": "Keysaster",
+    "platforms": [
+      6
+    ],
+    "player_perspectives": [
+      1
+    ],
+    "release_dates": [
+      903337
+    ],
+    "screenshots": [
+      1822475,
+      1822476,
+      1822469,
+      1822470,
+      1822471,
+      1822472,
+      1822473,
+      1822474
+    ],
+    "similar_games": [
+      111130,
+      113895,
+      25646,
+      68271,
+      26658,
+      55282,
+      105233,
+      13189,
+      103295,
+      106987
+    ],
+    "slug": "keysaster",
+    "summary": "On your way to meet a friend at a cafe, you suddenly black out for reasons unknown.... awakening in a place that is clearly not the human world. If you want to survive, evade hostile entities and search for key items to escape.",
+    "tags": [
+      1,
+      19,
+      268435488
+    ],
+    "themes": [
+      1,
+      19
+    ],
+    "updated_at": 1777029151,
+    "url": "https://www.igdb.com/games/keysaster",
+    "videos": [
+      182046
+    ],
+    "websites": [
+      1047406,
+      1047407,
+      1047408,
+      1047410
+    ],
+    "checksum": "a6857c8c-f529-f1cb-a863-2723bc95defb",
+    "language_supports": [
+      1628059,
+      1628060,
+      1628061,
+      1628062,
+      1628063,
+      1628064,
+      1628065,
+      1628066,
+      1628067,
+      1628068,
+      1628069,
+      1628070,
+      1628071,
+      1628072,
+      1628073,
+      1628074,
+      1628075,
+      1628076,
+      1628077,
+      1628078,
+      1628079,
+      1628080,
+      1628081,
+      1628082
+    ],
+    "game_type": 0
+  },
+  {
+    "id": 72446,
+    "artworks": [
+      32698
+    ],
+    "cover": 102545,
+    "created_at": 1507024410,
+    "external_games": [
+      1956296,
+      186943
+    ],
+    "first_release_date": 1508284800,
+    "game_modes": [
+      1
+    ],
+    "genres": [
+      32
+    ],
+    "name": "Liquidator",
+    "platforms": [
+      6
+    ],
+    "rating": 50.0,
+    "rating_count": 0,
+    "release_dates": [
+      123019
+    ],
+    "screenshots": [
+      127854,
+      127853,
+      127855,
+      127857,
+      127856
+    ],
+    "similar_games": [
+      113895,
+      105233,
+      111130,
+      32902,
+      119121,
+      40524,
+      106987,
+      37419,
+      28309,
+      43367
+    ],
+    "slug": "liquidator",
+    "summary": "Liquidator is the story of a dynamic new generation of shooters. \nIn the game you have to play the role of a former soldier of special purpose, which was injured, and now he was sent to work in one of the buildings of the CIA. In the first day, something went wrong...",
+    "tags": [
+      1,
+      268435488
+    ],
+    "themes": [
+      1
+    ],
+    "total_rating": 50.0,
+    "total_rating_count": 0,
+    "updated_at": 1670979933,
+    "url": "https://www.igdb.com/games/liquidator",
+    "websites": [
+      58615,
+      413572
+    ],
+    "checksum": "62c0939c-459e-8e64-4704-46d1918c74e1",
+    "game_type": 0
+  },
+  {
+    "id": 387756,
+    "alternative_names": [
+      261579
+    ],
+    "artworks": [
+      251551,
+      251552
+    ],
+    "cover": 531364,
+    "created_at": 1769787831,
+    "external_games": [
+      3147749,
+      2732297
+    ],
+    "first_release_date": 1693526400,
+    "game_modes": [
+      1,
+      2,
+      3
+    ],
+    "genres": [
+      32
+    ],
+    "name": "Tip of the Tongue",
+    "platforms": [
+      6
+    ],
+    "release_dates": [
+      865730
+    ],
+    "slug": "tip-of-the-tongue",
+    "summary": "Boost your English vocabulary with this engaging survival puzzler! Guess objects, learn, and progress through diverse categories.",
+    "updated_at": 1771432118,
+    "url": "https://www.igdb.com/games/tip-of-the-tongue",
+    "websites": [
+      998344
+    ],
+    "checksum": "6dc4815b-6172-fad6-4a02-e0f1c93b0f8e",
+    "language_supports": [
+      1540054
+    ],
+    "game_type": 0
+  },
+  {
+    "id": 350619,
+    "cover": 467625,
+    "created_at": 1750537998,
+    "external_games": [
+      3080927,
+      3075773
+    ],
+    "first_release_date": 1633996800,
+    "genres": [
+      32
+    ],
+    "involved_companies": [
+      326360
+    ],
+    "keywords": [
+      308
+    ],
+    "name": "Floral Gutter",
+    "platforms": [
+      6
+    ],
+    "release_dates": [
+      759179
+    ],
+    "screenshots": [
+      1569922,
+      1569923,
+      1569924,
+      1569925
+    ],
+    "slug": "floral-gutter",
+    "summary": "Fairly broken game",
+    "themes": [
+      31
+    ],
+    "updated_at": 1750837462,
+    "url": "https://www.igdb.com/games/floral-gutter",
+    "websites": [
+      820654
+    ],
+    "checksum": "e6cf1494-8698-db1a-5eb6-7bc84d7e2897",
+    "game_type": 0
+  },
+  {
+    "id": 269473,
+    "artworks": [
+      166084
+    ],
+    "cover": 334181,
+    "created_at": 1696070975,
+    "external_games": [
+      2749182,
+      2744992
+    ],
+    "first_release_date": 1696550400,
+    "game_engines": [
+      1557,
+      13
+    ],
+    "game_modes": [
+      1,
+      2,
+      3
+    ],
+    "genres": [
+      32
+    ],
+    "involved_companies": [
+      233180
+    ],
+    "keywords": [
+      101,
+      948,
+      1244,
+      1403,
+      3224,
+      23156
+    ],
+    "multiplayer_modes": [
+      25156,
+      25157,
+      25158
+    ],
+    "name": "Resonite",
+    "platforms": [
+      3,
+      6,
+      163
+    ],
+    "player_perspectives": [
+      1,
+      2,
+      7
+    ],
+    "rating": 100.0,
+    "rating_count": 11,
+    "release_dates": [
+      522726,
+      522727,
+      522725
+    ],
+    "screenshots": [
+      1157169,
+      1157170,
+      1157171,
+      1157172,
+      1157173,
+      1157174
+    ],
+    "similar_games": [
+      10776,
+      55689,
+      37419,
+      29173,
+      51577,
+      9243,
+      34823,
+      117717,
+      55888,
+      38967
+    ],
+    "slug": "resonite--1",
+    "status": 4,
+    "summary": "Enter a novel digital universe with infinite possibilities. Whether you resonate with people around the world in a casual conversation, playing games and socializing or you riff off each other when creating anything from art to programming complex games, you'll find your place here.",
+    "tags": [
+      28,
+      33,
+      34,
+      268435488,
+      536871013,
+      536871860,
+      536872156,
+      536872315,
+      536874136,
+      536894068
+    ],
+    "themes": [
+      28,
+      33,
+      34
+    ],
+    "total_rating": 100.0,
+    "total_rating_count": 11,
+    "updated_at": 1776882956,
+    "url": "https://www.igdb.com/games/resonite--1",
+    "videos": [
+      98891,
+      98890
+    ],
+    "websites": [
+      910207,
+      910208,
+      737629,
+      585778,
+      585775,
+      585779,
+      585776,
+      585780,
+      585777
+    ],
+    "checksum": "8bfcd47d-5451-2f0d-2dd9-7c803719aac4",
+    "language_supports": [
+      808687,
+      808688,
+      808689,
+      808690,
+      808691,
+      808692,
+      808693,
+      808694,
+      808695,
+      808696,
+      808697,
+      808698,
+      808699,
+      808700,
+      808701,
+      808702
+    ],
+    "game_status": 4,
+    "game_type": 0
+  }
+]
