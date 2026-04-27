@@ -1,13 +1,13 @@
 """Twitch Helix API client."""
 
-from backend.core.utils.twitch_api_base_client import TwitchApiAuth
+from backend.core.utils.twitch_api_base_client import TwitchApiBaseClient
 
 
 _TWITCH_API_URL = "https://api.twitch.tv/helix"
 _DEFAULT_PAGE_SIZE = 100
 
 
-class TwitchApiClient(TwitchApiAuth):
+class TwitchApiClient(TwitchApiBaseClient):
     """Client for the Twitch Helix API."""
 
     def get_streams(self, game_ids, first=_DEFAULT_PAGE_SIZE, after=None):

@@ -1,12 +1,12 @@
 """IGDB API client. Uses the same Twitch OAuth flow as Helix."""
 
-from backend.core.utils.twitch_api_base_client import TwitchApiAuth
+from backend.core.utils.twitch_api_base_client import TwitchApiBaseClient
 
 
 _IGDB_API_URL = "https://api.igdb.com/v4"
 
 
-class IgdbApiClient(TwitchApiAuth):
+class IgdbApiClient(TwitchApiBaseClient):
     """Client for the IGDB API.
 
     Note: IGDB uses Apicalypse (POST with a text body) rather than REST query
