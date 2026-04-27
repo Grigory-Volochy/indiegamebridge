@@ -1,6 +1,6 @@
 """Twitch Helix API client."""
 
-from backend.core.utils.twitch_api_base_client import TwitchApiBaseClient
+from core.utils.twitch_api_base_client import TwitchApiBaseClient
 
 
 _TWITCH_API_URL = "https://api.twitch.tv/helix"

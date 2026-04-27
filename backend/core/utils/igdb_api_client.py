@@ -1,6 +1,6 @@
 """IGDB API client. Uses the same Twitch OAuth flow as Helix."""
 
-from backend.core.utils.twitch_api_base_client import TwitchApiBaseClient
+from core.utils.twitch_api_base_client import TwitchApiBaseClient
 
 
 _IGDB_API_URL = "https://api.igdb.com/v4"
