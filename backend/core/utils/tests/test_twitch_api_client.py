@@ -22,7 +22,7 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
             {"data": [{"id": "4"}], "pagination": {}},
         ]
         with mock.patch.object(client, "get_streams", side_effect=pages) as gs:
-            result = list(client.iter_streams(game_ids=["g"]))
+            result = list(client.iter_streams(languages=["nolang"]))
 
         self.assertEqual([s["id"] for s in result], ["1", "2", "3", "4"])
         self.assertEqual(
@@ -35,7 +35,7 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
         with mock.patch.object(
             client, "get_streams", return_value={"data": [{"id": "1"}]}
         ) as gs:
-            result = list(client.iter_streams(game_ids=["g"]))
+            result = list(client.iter_streams(languages=["nolang"]))
 
         self.assertEqual(result, [{"id": "1"}])
         gs.assert_called_once()
@@ -47,7 +47,7 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
             "get_streams",
             return_value={"data": [], "pagination": {"cursor": ""}},
         ) as gs:
-            result = list(client.iter_streams(game_ids=["g"]))
+            result = list(client.iter_streams(languages=["nolang"]))
 
         self.assertEqual(result, [])
         gs.assert_called_once()
