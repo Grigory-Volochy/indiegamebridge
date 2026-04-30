@@ -1,13 +1,14 @@
 """Twitch Helix API client."""
 
+import time
 from collections import namedtuple
 
 from core.utils.twitch_api_base_client import TwitchApiBaseClient
 
 
 _TWITCH_API_URL = "https://api.twitch.tv/helix"
-_DEFAULT_PAGE_SIZE = 5 # 100
-_DEFAULT_MAX_REQUESTS_PER_RUN = 3 # 750
+_DEFAULT_PAGE_SIZE = 100
+_DEFAULT_MAX_REQUESTS_PER_LANGUAGE_POLL_ROUND = 750
 
 # Collect only necessary fields to reduce memory usage
 StreamTuple = namedtuple("StreamTuple", ["id", "user_id","viewer_count", "game_id", "type"])
@@ -39,16 +40,21 @@ class TwitchApiClient(TwitchApiBaseClient):
         resp = self._request("GET", f"{_TWITCH_API_URL}/streams", params=params)
         return resp.json()
 
-    def iter_streams(self, language, max_requests=_DEFAULT_MAX_REQUESTS_PER_RUN, cursor=None):
-        """Retrieves specified amount of pages
+    def iter_streams(self, language, end_time_anchor, max_requests=_DEFAULT_MAX_REQUESTS_PER_LANGUAGE_POLL_ROUND, cursor=None):
+        """Paginates through live streams for one language, up to max_requests pages.
 
         Args:
-            language (str): The streams language tag using an ISO 639-1 two-letter language code
-            max_requests (int, optional): Requests limit for the one run. Defaults to _DEFAULT_MAX_REQUESTS_PER_RUN.
-            cursor (str, optional): The cursor used to get the next page of results. Defaults to None.
+            language (str): The streams language tag using an ISO 639-1 two-letter language code.
+            end_time_anchor (int): Soft deadline as a `time.time()` value. Checked after each
+                page; if exceeded, pagination stops and the partial result is returned. Requests
+                already in flight are not aborted.
+            max_requests (int, optional): Maximum number of paginated requests to issue in this
+                call. Defaults to _DEFAULT_MAX_REQUESTS_PER_LANGUAGE_POLL_ROUND.
+            cursor (str, optional): Pagination cursor to resume from. Defaults to None.
 
         Returns:
-            list, str: streams, cursor
+            tuple[list[StreamTuple], str | None]: Collected streams and the next cursor
+            (None if pagination is exhausted).
         """
 
         streams = []
@@ -62,8 +68,10 @@ class TwitchApiClient(TwitchApiBaseClient):
                     game_id=one_raw_stream.get("game_id"),
                     type=one_raw_stream.get("type"),
                 ))
-                    
+
             cursor = raw_streams.get("pagination", {}).get("cursor")
-            if not cursor:
+
+            if not cursor or time.time() >= end_time_anchor:
                 break
+
         return streams, cursor
