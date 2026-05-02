@@ -1,14 +1,18 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from apps.streams.models.streamer_profile import StreamerProfile
 
 
 class Stream(models.Model):
     class Status(models.TextChoices):
-        LIVE = 'live', 'Live'
-        OFFLINE = 'offline', 'Offline'
+        LIVE = "live", "Live"
+        OFFLINE = "offline", "Offline"
 
-    class Host(models.TextChoices):
-        TWITCH = 'twitch', 'Twitch'
+    streamer_profile = models.ForeignKey(
+        StreamerProfile,
+        on_delete=models.CASCADE,
+        related_name="streams"
+    )
 
     status = models.CharField(
         max_length=16,
@@ -20,17 +24,6 @@ class Stream(models.Model):
     host_stream_id = models.CharField(
         max_length=64,
         help_text="An ID that identifies the stream - defined by host"
-    )
-
-    host_user_id = models.CharField(
-        max_length=64,
-        help_text="The ID of the user that is broadcasting the stream - defined by host"
-    )
-
-    host = models.CharField(
-        max_length=16,
-        choices=Host.choices,
-        help_text="Host name"
     )
 
     language = models.CharField(
@@ -64,8 +57,8 @@ class Stream(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['host', 'host_stream_id'], name='unique_host_stream'),
+            models.UniqueConstraint(fields=["streamer_profile", "host_stream_id"], name="unique_host_stream"),
         ]
 
     def __str__(self):
-        return f'Stream ID: {self.host_stream_id} | Streamer ID: {self.host_user_id} | Status: {self.status}'
+        return f"Stream ID: {self.host_stream_id} | Streamer ID: {self.streamer_profile_id} | Status: {self.status}"

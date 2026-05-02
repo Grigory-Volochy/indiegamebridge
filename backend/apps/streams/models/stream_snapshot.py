@@ -7,7 +7,7 @@ class StreamSnapshot(models.Model):
     stream = models.ForeignKey(
         Stream,
         on_delete=models.CASCADE,
-        related_name='snapshots'
+        related_name="snapshots"
     )
 
     viewers = models.PositiveIntegerField(
@@ -25,4 +25,4 @@ class StreamSnapshot(models.Model):
     )
 
     def __str__(self):
-        return f'Stream ID: {self.stream_id} | Time: {self.shot_at} | Viewers: {self.viewers}'
+        return f"Stream ID: {self.stream_id} | Time: {self.shot_at} | Viewers: {self.viewers}"
