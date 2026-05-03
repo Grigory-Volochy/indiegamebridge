@@ -26,6 +26,11 @@ class StreamerProfile(models.Model):
         help_text="User display name defined by host"
     )
 
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Time of the latest update for the profile"
+    )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["host", "host_user_id"], name="unique_host_user"),

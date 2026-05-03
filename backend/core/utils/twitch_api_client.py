@@ -11,7 +11,19 @@ _DEFAULT_PAGE_SIZE = 100
 _DEFAULT_MAX_REQUESTS_PER_LANGUAGE_POLL_ROUND = 750
 
 # Collect only necessary fields to reduce memory usage
-StreamTuple = namedtuple("StreamTuple", ["id", "user_id","viewer_count", "game_id", "type"])
+StreamTuple = namedtuple(
+    "StreamTuple",
+    [
+        "status",
+        "host_stream_id",
+        "host_user_id",
+        "host_login",
+        "host_display_name",
+        "host_game_id",
+        "viewers",
+        "started_at",
+    ]
+)
 
 
 class TwitchApiClient(TwitchApiBaseClient):
@@ -40,7 +52,7 @@ class TwitchApiClient(TwitchApiBaseClient):
         resp = self._request("GET", f"{_TWITCH_API_URL}/streams", params=params)
         return resp.json()
 
-    def iter_streams(self, language, end_time_anchor, max_requests=_DEFAULT_MAX_REQUESTS_PER_LANGUAGE_POLL_ROUND, cursor=None):
+    def iter_streams(self, language, end_time_anchor, max_requests=_DEFAULT_MAX_REQUESTS_PER_LANGUAGE_POLL_ROUND, cursor=None) -> tuple[list[StreamTuple], str]:
         """Paginates through live streams for one language, up to max_requests pages.
 
         Args:
@@ -61,13 +73,20 @@ class TwitchApiClient(TwitchApiBaseClient):
         for _ in range(max_requests):
             raw_streams = self.get_streams(language, after=cursor)
             for one_raw_stream in raw_streams.get("data", []):
-                streams.append(StreamTuple(
-                    id=one_raw_stream.get("id"),
-                    user_id=one_raw_stream.get("user_id"),
-                    viewer_count=one_raw_stream.get("viewer_count"),
-                    game_id=one_raw_stream.get("game_id"),
-                    type=one_raw_stream.get("type"),
-                ))
+                current_stream = StreamTuple(
+                    status=one_raw_stream.get("type", None),
+                    host_stream_id=one_raw_stream.get("id", None),
+                    host_user_id=one_raw_stream.get("user_id", None),
+                    host_login=one_raw_stream.get("user_login", None),
+                    host_display_name=one_raw_stream.get("user_name", None),
+                    host_game_id=one_raw_stream.get("game_id", None),
+                    viewers=one_raw_stream.get("viewer_count", None),
+                    started_at=one_raw_stream.get("started_at", None),
+                )
+
+                # All fields are required
+                if None not in current_stream:
+                    streams.append(current_stream)
 
             cursor = raw_streams.get("pagination", {}).get("cursor")
 

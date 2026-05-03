@@ -1,12 +1,17 @@
 import time
+from datetime import timedelta
 import concurrent.futures
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.utils import timezone
+
 from core.utils.twitch_api_client import TwitchApiClient
+from apps.streams.models import StreamerProfile, Stream, StreamSnapshot
 
 
 class Command(BaseCommand):
-    help = 'Retrieves a list of streams'
+    help = "Retrieves a list of streams"
 
     # Combined Helix request budget across all languages per poll round.
     # Together with min_time_per_poll_round this keeps the steady-state
@@ -21,7 +26,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write("Starting to fetch streams...")
 
-        # TODO: later use values from admin settings
+        # TODO LATER: use values from admin settings
         languages = ["en", "de", "fr"]
 
         # Used to calculate limit of allowed requests per language
@@ -30,13 +35,17 @@ class Command(BaseCommand):
 
         # Per-language cap on Helix requests within a single poll round.
         # Bounds the in-memory batch each language thread accumulates before the DataBase write.
-        # TODO: later use value from admin settings
+        # TODO LATER: use value from admin settings
         max_requests_per_language_poll_round = 100
 
-        # TODO: later use value from admin settings
+        # Cron tick interval in minutes.
+        # TODO LATER: use value from admin settings
+        cron_interval_minutes = 10
+
+        # TODO LATER: use value from admin settings
         self.total_max_requests_per_poll_round = 200
 
-        # TODO: later use value from admin settings
+        # TODO LATER: use value from admin settings
         self.min_time_per_poll_round = 20
 
         # Per-language request budget for this poll round, taking the lower of:
@@ -49,7 +58,7 @@ class Command(BaseCommand):
         # Polling normally finishes on its own once each language's cursor is exhausted;
         # this fuse forces the command to stop before the next cron tick fires,
         # preventing two invocations from overlapping if a round is unusually slow.
-        # TODO: later use value from admin settings
+        # TODO LATER: use value from admin settings
         total_max_poll_time = 100
 
         end_time_anchor = time.time() + total_max_poll_time
@@ -82,7 +91,15 @@ class Command(BaseCommand):
                 if nof_current_languages > 0:
                     self.allowed_requests_per_language_poll_round = min(round(self.total_max_requests_per_poll_round / nof_current_languages), max_requests_per_language_poll_round)
 
+            # For every storing stream with live status and finished_at older than 10 cron time span for the polling, update status to offline
+            stale_stream_threshold = timezone.now() - timedelta(minutes=10 * cron_interval_minutes)
+            stale_stream_count = Stream.objects.filter(
+                status=Stream.Status.LIVE,
+                finished_at__lt=stale_stream_threshold,
+            ).update(status=Stream.Status.OFFLINE)
+
         self.stdout.write(self.style.SUCCESS(f"Total streams collected: {total_collected}"))
+        self.stdout.write(self.style.SUCCESS(f"Marked {stale_stream_count} stale streams as offline"))
 
     def _poll_streams_by_lang(self, the_language, end_time_anchor):
         """Polls Twitch streams for one language until the cursor is exhausted or the deadline is hit.
@@ -103,8 +120,8 @@ class Command(BaseCommand):
             int: Total number of streams collected for this language across all rounds.
         """
 
-        collected = 0
         with TwitchApiClient() as client:
+            dedup_ids = set()
             cursor = None
             while True:
                 round_started_at = time.time()
@@ -116,16 +133,48 @@ class Command(BaseCommand):
                     cursor=cursor
                 )
 
-                collected += len(response_streams)
-                self.stdout.write(self.style.SUCCESS(f"Streams fetched per poll round: {len(response_streams)}"))
+                self.stdout.write(self.style.SUCCESS(f"Unfiltered streams fetched per poll round: {len(response_streams)}"))
 
-                for one_stream in response_streams:
-                    # TODO: handle insert/update for each stream
-                    pass
+                # Insert/update data
+                with transaction.atomic():
+                    for one_stream in response_streams:
 
-                if response_streams:
-                    # TODO: write streams to DataBase
-                    pass
+                        # Avoid duplicated streams due to possible page shifts during the poll
+                        if one_stream.host_stream_id in dedup_ids:
+                            continue
+                        dedup_ids.add(one_stream.host_stream_id)
+
+                        profile, _ = StreamerProfile.objects.get_or_create(
+                            host=StreamerProfile.Host.TWITCH,
+                            host_user_id=one_stream.host_user_id,
+                            defaults={
+                                "host_login": one_stream.host_login,
+                                "host_display_name": one_stream.host_display_name,
+                            }
+                        )
+
+                        # Update rarely changed fields on mismatch
+                        if (profile.host_login, profile.host_display_name) != (one_stream.host_login, one_stream.host_display_name):
+                            profile.host_login = one_stream.host_login
+                            profile.host_display_name = one_stream.host_display_name
+                            profile.save(update_fields=["host_login", "host_display_name"])
+
+                        stream, _ = Stream.objects.update_or_create(
+                            streamer_profile=profile,
+                            host_stream_id=one_stream.host_stream_id,
+                            defaults={
+                                "status": Stream.Status.LIVE,
+                                "language": the_language,
+                                "started_at": one_stream.started_at,
+                                "finished_at": timezone.now(),
+                            }
+                        )
+
+                        StreamSnapshot.objects.create(
+                            stream=stream,
+                            viewers=one_stream.viewers,
+                            host_game_id=one_stream.host_game_id,
+                        )
 
                 # Normal end of the language polling
                 if not response_streams or not cursor:
@@ -136,7 +185,7 @@ class Command(BaseCommand):
                 # slowly. If this fires regularly, raise the cron interval and total_max_poll_time in step.
                 if time.time() >= end_time_anchor:
                     self.stdout.write(self.style.WARNING(f"Stream polling terminated as time limit exceeded. Language: {the_language}"))
-                    # TODO: make entry for admin dashboard analytics with details about the issue
+                    # TODO LATER: make entry for admin dashboard analytics with details about the issue
                     break
 
                 # Respect Helix rate limits
@@ -144,7 +193,7 @@ class Command(BaseCommand):
                 if time_to_sleep > 0:
                     time.sleep(time_to_sleep)
                 else:
-                    # TODO: make entry for admin dashboard analytics that round takes more time than the current time limit for single round
+                    # TODO LATER: make entry for admin dashboard analytics that round takes more time than the current time limit for single round
                     self.stdout.write(self.style.WARNING(f"Stream poll round exceeded current time limit for single round. Language: {the_language}"))
 
-        return collected
+        return len(dedup_ids)

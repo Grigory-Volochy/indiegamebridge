@@ -39,10 +39,12 @@ class Stream(models.Model):
     )
 
     max_viewers = models.PositiveIntegerField(
+        default=0,
         help_text="Max viewers number detected by snapshots"
     )
 
     avg_viewers = models.PositiveIntegerField(
+        default=0,
         help_text="Average viewers number calculated via snapshots"
     )
 
@@ -52,7 +54,7 @@ class Stream(models.Model):
 
     finished_at = models.DateTimeField(
         help_text="Time when stream finished. While the stream is live, this is updated on every poll"
-            " to act as 'last seen alive'. Once the stream goes offline, the value is finalized and stops updating."
+            " to act as last seen alive. Once the stream goes offline, the value is finalized and stops updating."
     )
 
     class Meta:
