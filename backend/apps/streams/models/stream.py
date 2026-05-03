@@ -1,4 +1,5 @@
 from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 from apps.streams.models.streamer_profile import StreamerProfile
 
@@ -31,13 +32,6 @@ class Stream(models.Model):
         help_text="ISO 639-1 two-letter language code"
     )
 
-    host_game_ids = ArrayField(
-        models.CharField(max_length=64),
-        blank=True,
-        default=list,
-        help_text="The game IDs detected by snapshots"
-    )
-
     max_viewers = models.PositiveIntegerField(
         default=0,
         help_text="Max viewers number detected by snapshots"
@@ -57,9 +51,20 @@ class Stream(models.Model):
             " to act as last seen alive. Once the stream goes offline, the value is finalized and stops updating."
     )
 
+    game_metrics = models.JSONField(
+        blank=True,
+        default=list,
+        help_text="Per-game metrics aggregated from snapshots once the stream goes offline."
+            " List of dicts with short keys to keep JSONB compact:"
+            " g=host_game_id, mv=max_viewers, av=avg_viewers, d=duration_seconds."
+    )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["streamer_profile", "host_stream_id"], name="unique_host_stream"),
+        ]
+        indexes = [
+            GinIndex(fields=["game_metrics"], name="stream_game_metrics_gin"),
         ]
 
     def __str__(self):
