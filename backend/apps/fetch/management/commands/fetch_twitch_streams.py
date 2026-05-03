@@ -59,7 +59,7 @@ class Command(BaseCommand):
         # this fuse forces the command to stop before the next cron tick fires,
         # preventing two invocations from overlapping if a round is unusually slow.
         # TODO LATER: use value from admin settings
-        total_max_poll_time = 100
+        total_max_poll_time = 480
 
         end_time_anchor = time.time() + total_max_poll_time
 
