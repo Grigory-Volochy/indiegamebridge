@@ -25,6 +25,17 @@ StreamTuple = namedtuple(
     ]
 )
 
+# Mirrors the corresponding model CharField max_lengths. Streams whose API values
+# exceed any of these bounds are skipped to keep DB inserts safe.
+_STR_FIELD_MAX_LENGTHS = {
+    "status": 16,
+    "host_stream_id": 64,
+    "host_user_id": 64,
+    "host_login": 64,
+    "host_display_name": 255,
+    "host_game_id": 64,
+}
+
 
 class TwitchApiClient(TwitchApiBaseClient):
     """Client for the Twitch Helix API."""
@@ -84,8 +95,11 @@ class TwitchApiClient(TwitchApiBaseClient):
                     started_at=one_raw_stream.get("started_at", None),
                 )
 
-                # All fields are required
-                if None not in current_stream:
+                # All fields are required, and string fields must fit their DB column
+                if all(current_stream) and all(
+                    len(getattr(current_stream, field)) <= max_len
+                    for field, max_len in _STR_FIELD_MAX_LENGTHS.items()
+                ):
                     streams.append(current_stream)
 
             cursor = raw_streams.get("pagination", {}).get("cursor")
