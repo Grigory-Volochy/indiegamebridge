@@ -1,8 +1,8 @@
 # IndieGameBridge
 
-A discovery platform connecting indie game developers with small-to-mid streamers.
+A discovery platform connecting indie game developers with streamers.
 
-Indie devs struggle to find the right small streamers to pitch their games to, and small streamers are systematically overlooked by big publisher creator programs. IndieGameBridge aggregates public streaming data into a filterable directory so both sides can find each other.
+Indie devs struggle to find the right small streamers to pitch their games to, and some streamers are systematically overlooked by big publisher creator programs. IndieGameBridge aggregates public streaming data into a filterable directory so both sides can find each other.
 
 ## Status
 

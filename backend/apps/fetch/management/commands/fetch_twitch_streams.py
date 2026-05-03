@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import timedelta
 import concurrent.futures
@@ -8,6 +9,8 @@ from django.utils import timezone
 
 from core.utils.twitch_api_client import TwitchApiClient
 from apps.streams.models import StreamerProfile, Stream, StreamSnapshot
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -24,7 +27,7 @@ class Command(BaseCommand):
     allowed_requests_per_language_poll_round = 0
 
     def handle(self, *args, **kwargs):
-        self.stdout.write("Starting to fetch streams...")
+        logger.info("Starting to fetch streams...")
 
         # TODO LATER: use values from admin settings
         languages = ["en", "de", "fr"]
@@ -40,7 +43,7 @@ class Command(BaseCommand):
 
         # Cron tick interval in minutes.
         # TODO LATER: use value from admin settings
-        cron_interval_minutes = 10
+        cron_interval_minutes = 15
 
         # TODO LATER: use value from admin settings
         self.total_max_requests_per_poll_round = 200
@@ -81,9 +84,9 @@ class Command(BaseCommand):
                 label = future_to_poll[future]
                 try:
                     total_collected += future.result()
-                except Exception as e:
-                    self.stderr.write(self.style.ERROR(f"{label} failed: {e}"))
-                self.stdout.write(self.style.SUCCESS(f"Completed - {label}"))
+                except Exception:
+                    logger.exception("%s failed", label)
+                logger.info("Completed - %s", label)
 
                 # When poll for certain language is finished, then the max value of available requests for each language should be recalculated,
                 # because the limits allocated to the language are now released and available for remaining languages in the queue
@@ -92,14 +95,14 @@ class Command(BaseCommand):
                     self.allowed_requests_per_language_poll_round = min(round(self.total_max_requests_per_poll_round / nof_current_languages), max_requests_per_language_poll_round)
 
             # For every storing stream with live status and finished_at older than 10 cron time span for the polling, update status to offline
-            stale_stream_threshold = timezone.now() - timedelta(minutes=10 * cron_interval_minutes)
+            stale_stream_threshold = timezone.now() - timedelta(minutes=4 * cron_interval_minutes)
             stale_stream_count = Stream.objects.filter(
                 status=Stream.Status.LIVE,
                 finished_at__lt=stale_stream_threshold,
             ).update(status=Stream.Status.OFFLINE)
 
-        self.stdout.write(self.style.SUCCESS(f"Total streams collected: {total_collected}"))
-        self.stdout.write(self.style.SUCCESS(f"Marked {stale_stream_count} stale streams as offline"))
+        logger.info("Total streams collected: %s", total_collected)
+        logger.info("Marked %s stale streams as offline", stale_stream_count)
 
     def _poll_streams_by_lang(self, the_language, end_time_anchor):
         """Polls Twitch streams for one language until the cursor is exhausted or the deadline is hit.
@@ -133,7 +136,7 @@ class Command(BaseCommand):
                     cursor=cursor
                 )
 
-                self.stdout.write(self.style.SUCCESS(f"Unfiltered streams fetched per poll round: {len(response_streams)}"))
+                logger.info("Unfiltered streams fetched per poll round: %s | Language: %s", len(response_streams), the_language)
 
                 # Insert/update data
                 with transaction.atomic():
@@ -184,16 +187,15 @@ class Command(BaseCommand):
                 # current configuration can drain in one cron interval, or Helix is responding
                 # slowly. If this fires regularly, raise the cron interval and total_max_poll_time in step.
                 if time.time() >= end_time_anchor:
-                    self.stdout.write(self.style.WARNING(f"Stream polling terminated as time limit exceeded. Language: {the_language}"))
+                    logger.warning("Stream polling terminated as time limit exceeded. Language: %s", the_language)
                     # TODO LATER: make entry for admin dashboard analytics with details about the issue
                     break
 
                 # Respect Helix rate limits
-                time_to_sleep = round(self.min_time_per_poll_round - (time.time() - round_started_at))
+                execution_time = round(time.time() - round_started_at)
+                time_to_sleep = self.min_time_per_poll_round - execution_time
+                logger.info("Execution time: %ss | Safe execution time is >= %ss | Language: %s", execution_time, self.min_time_per_poll_round, the_language)
                 if time_to_sleep > 0:
                     time.sleep(time_to_sleep)
-                else:
-                    # TODO LATER: make entry for admin dashboard analytics that round takes more time than the current time limit for single round
-                    self.stdout.write(self.style.WARNING(f"Stream poll round exceeded current time limit for single round. Language: {the_language}"))
 
         return len(dedup_ids)
