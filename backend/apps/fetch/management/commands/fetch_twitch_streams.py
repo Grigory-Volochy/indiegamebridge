@@ -223,8 +223,9 @@ class Command(BaseCommand):
         - `max_viewers` = max viewer value observed across all snapshots (`max(s["v"] ...)`)
         - `host_game_ids`    = sorted distinct game ids observed (`sorted({s["g"] ...})`)
         Then bulk-updates status=OFFLINE plus those summary fields. Streams with
-        `len(snapshots) <= 1` carry too little signal and are dropped entirely. All writes
-        happen in one transaction so the state stays consistent under failure.
+        `len(snapshots) <= 1` or `max_viewers < 3` carry too little signal and are dropped
+        entirely. All writes happen in one transaction so the state stays consistent under
+        failure.
 
         Args:
             stale_stream_threshold (datetime): Streams with status=LIVE and finished_at older than
@@ -250,8 +251,12 @@ class Command(BaseCommand):
             if len(snaps) <= 1:
                 insufficient_ids.append(stream.id)
                 continue
+            max_viewers = max(s["v"] for s in snaps)
+            if max_viewers < 3:
+                insufficient_ids.append(stream.id)
+                continue
             stream.status = Stream.Status.OFFLINE
-            stream.max_viewers = max(s["v"] for s in snaps)
+            stream.max_viewers = max_viewers
             stream.host_game_ids = sorted({s["g"] for s in snaps})
             streams_to_update.append(stream)
 
