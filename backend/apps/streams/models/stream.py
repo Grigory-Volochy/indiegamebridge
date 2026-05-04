@@ -22,8 +22,7 @@ class Stream(models.Model):
         help_text="Whether the stream is currently live or offline - defined by host"
     )
 
-    host_stream_id = models.CharField(
-        max_length=64,
+    host_stream_id = models.BigIntegerField(
         help_text="An ID that identifies the stream - defined by host"
     )
 
@@ -34,12 +33,9 @@ class Stream(models.Model):
 
     max_viewers = models.PositiveIntegerField(
         default=0,
-        help_text="Max viewers number detected by snapshots"
-    )
-
-    avg_viewers = models.PositiveIntegerField(
-        default=0,
-        help_text="Average viewers number calculated via snapshots"
+        db_index=True,
+        help_text="Max viewers observed across all snapshots."
+            " Populated when the stream goes offline; live streams stay at 0."
     )
 
     started_at = models.DateTimeField(
@@ -51,12 +47,19 @@ class Stream(models.Model):
             " to act as last seen alive. Once the stream goes offline, the value is finalized and stops updating."
     )
 
-    game_metrics = models.JSONField(
+    snapshots = models.JSONField(
         blank=True,
         default=list,
-        help_text="Per-game metrics aggregated from snapshots once the stream goes offline."
-            " List of dicts with short keys to keep JSONB compact:"
-            " g=host_game_id, mv=max_viewers, av=avg_viewers, d=duration_seconds."
+        help_text="Rolling list of per-poll observations appended while the stream is live."
+            " Each entry is a dict with short keys: g=host_game_id, v=viewers, t=poll_timestamp_unix."
+    )
+
+    host_game_ids = ArrayField(
+        models.BigIntegerField(),
+        blank=True,
+        default=list,
+        help_text="Distinct game IDs observed across snapshots."
+            " Populated when the stream goes offline; supports fast lookup by game."
     )
 
     class Meta:
@@ -64,7 +67,7 @@ class Stream(models.Model):
             models.UniqueConstraint(fields=["streamer_profile", "host_stream_id"], name="unique_host_stream"),
         ]
         indexes = [
-            GinIndex(fields=["game_metrics"], name="stream_game_metrics_gin"),
+            GinIndex(fields=["host_game_ids"], name="stream_host_game_ids_gin"),
         ]
 
     def __str__(self):

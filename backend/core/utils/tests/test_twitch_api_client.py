@@ -8,13 +8,17 @@ from core.utils.twitch_api_client import StreamTuple, TwitchApiClient
 
 
 def _make_raw_stream(**overrides):
-    """Build a Helix /streams response entry with all fields populated."""
+    """Build a Helix /streams response entry with all fields populated.
+
+    Helix returns ID fields as strings (numeric content); the client is responsible
+    for converting them to int before they leave the boundary.
+    """
     defaults = {
-        "id": "stream-1",
-        "user_id": "user-1",
+        "id": "1001",
+        "user_id": "2001",
         "user_login": "loginx",
         "user_name": "DisplayName",
-        "game_id": "game-1",
+        "game_id": "3001",
         "viewer_count": 100,
         "started_at": "2025-01-01T00:00:00Z",
         "type": "live",
@@ -37,15 +41,15 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
         client = self._client()
         pages = [
             {
-                "data": [_make_raw_stream(id="1"), _make_raw_stream(id="2", user_id="u2")],
+                "data": [_make_raw_stream(id="1"), _make_raw_stream(id="2", user_id="22")],
                 "pagination": {"cursor": "abc"},
             },
             {
-                "data": [_make_raw_stream(id="3", user_id="u3")],
+                "data": [_make_raw_stream(id="3", user_id="33")],
                 "pagination": {"cursor": "def"},
             },
             {
-                "data": [_make_raw_stream(id="4", user_id="u4")],
+                "data": [_make_raw_stream(id="4", user_id="44")],
                 "pagination": {},
             },
         ]
@@ -54,7 +58,7 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
                 language="en", end_time_anchor=10**12
             )
 
-        self.assertEqual([s.host_stream_id for s in streams], ["1", "2", "3", "4"])
+        self.assertEqual([s.host_stream_id for s in streams], [1, 2, 3, 4])
         self.assertIsNone(cursor)
         self.assertEqual(
             [c.kwargs.get("after") for c in gs.call_args_list],
@@ -66,14 +70,14 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
         client = self._client()
         pages = [
             {"data": [_make_raw_stream(id="1")], "pagination": {"cursor": "abc"}},
-            {"data": [_make_raw_stream(id="2", user_id="u2")], "pagination": {"cursor": "def"}},
+            {"data": [_make_raw_stream(id="2", user_id="22")], "pagination": {"cursor": "def"}},
         ]
         with mock.patch.object(client, "get_streams", side_effect=pages):
             streams, cursor = client.iter_streams(
                 language="en", end_time_anchor=10**12, max_requests=2
             )
 
-        self.assertEqual([s.host_stream_id for s in streams], ["1", "2"])
+        self.assertEqual([s.host_stream_id for s in streams], [1, 2])
         self.assertEqual(cursor, "def")
 
     def test_stops_when_cursor_is_empty_string(self):
@@ -105,20 +109,20 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
         client = self._client()
         pages = [
             {"data": [_make_raw_stream(id="1")], "pagination": {"cursor": "abc"}},
-            {"data": [_make_raw_stream(id="2", user_id="u2")], "pagination": {"cursor": "def"}},
+            {"data": [_make_raw_stream(id="2", user_id="22")], "pagination": {"cursor": "def"}},
         ]
         with mock.patch.object(client, "get_streams", side_effect=pages) as gs:
             streams, cursor = client.iter_streams(language="en", end_time_anchor=0)
 
-        self.assertEqual([s.host_stream_id for s in streams], ["1"])
+        self.assertEqual([s.host_stream_id for s in streams], [1])
         self.assertEqual(cursor, "abc")
         gs.assert_called_once()
 
     def test_filters_out_entries_with_missing_fields(self):
         """Entries missing any required field land as None and must be dropped."""
         client = self._client()
-        full = _make_raw_stream(id="full")
-        missing_user_id = _make_raw_stream(id="bad")
+        full = _make_raw_stream(id="500")
+        missing_user_id = _make_raw_stream(id="600")
         missing_user_id.pop("user_id")
         page = {
             "data": [full, missing_user_id],
@@ -128,16 +132,32 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
             streams, _ = client.iter_streams(language="en", end_time_anchor=10**12)
 
         self.assertEqual(len(streams), 1)
-        self.assertEqual(streams[0].host_stream_id, "full")
+        self.assertEqual(streams[0].host_stream_id, 500)
+
+    def test_skips_stream_with_non_numeric_id(self):
+        """Helix is documented to return numeric ID strings; if it ever ships a non-numeric
+        value, the client must skip the stream rather than crashing the poll round."""
+        client = self._client()
+        good = _make_raw_stream(id="700")
+        bad = _make_raw_stream(id="ABC123")
+        page = {
+            "data": [good, bad],
+            "pagination": {},
+        }
+        with mock.patch.object(client, "get_streams", return_value=page):
+            streams, _ = client.iter_streams(language="en", end_time_anchor=10**12)
+
+        self.assertEqual(len(streams), 1)
+        self.assertEqual(streams[0].host_stream_id, 700)
 
     def test_builds_stream_tuple_from_raw_response(self):
         client = self._client()
         raw = _make_raw_stream(
-            id="abc",
-            user_id="u-7",
+            id="123",
+            user_id="7",
             user_login="login7",
             user_name="Display 7",
-            game_id="g-7",
+            game_id="77",
             viewer_count=42,
             started_at="2025-06-01T12:00:00Z",
             type="live",
@@ -150,11 +170,11 @@ class TwitchApiClientIterStreamsTests(SimpleTestCase):
             streams[0],
             StreamTuple(
                 status="live",
-                host_stream_id="abc",
-                host_user_id="u-7",
+                host_stream_id=123,
+                host_user_id=7,
                 host_login="login7",
                 host_display_name="Display 7",
-                host_game_id="g-7",
+                host_game_id=77,
                 viewers=42,
                 started_at="2025-06-01T12:00:00Z",
             ),

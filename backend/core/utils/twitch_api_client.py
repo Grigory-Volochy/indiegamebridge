@@ -1,9 +1,12 @@
 """Twitch Helix API client."""
 
+import logging
 import time
 from collections import namedtuple
 
 from core.utils.twitch_api_base_client import TwitchApiBaseClient
+
+logger = logging.getLogger(__name__)
 
 
 _TWITCH_API_URL = "https://api.twitch.tv/helix"
@@ -27,13 +30,12 @@ StreamTuple = namedtuple(
 
 # Mirrors the corresponding model CharField max_lengths. Streams whose API values
 # exceed any of these bounds are skipped to keep DB inserts safe.
+# (host_stream_id, host_user_id, host_game_id are stored as BigInteger in the DB,
+# so they're validated by int() conversion below rather than a length check.)
 _STR_FIELD_MAX_LENGTHS = {
     "status": 16,
-    "host_stream_id": 64,
-    "host_user_id": 64,
     "host_login": 64,
     "host_display_name": 255,
-    "host_game_id": 64,
 }
 
 
@@ -81,16 +83,35 @@ class TwitchApiClient(TwitchApiBaseClient):
         """
 
         streams = []
+        non_numeric_id_type_detected = False
         for _ in range(max_requests):
             raw_streams = self.get_streams(language, after=cursor)
             for one_raw_stream in raw_streams.get("data", []):
+                raw_stream_id = one_raw_stream.get("id")
+                raw_user_id = one_raw_stream.get("user_id")
+                raw_game_id = one_raw_stream.get("game_id")
+
+                # Silently skip streams with any empty ID
+                if not all([raw_stream_id, raw_user_id, raw_game_id]):
+                    continue
+
+                # Helix returns these as strings; we store them as BIGINT for size/speed.
+                # Skip the stream if any value is unexpectedly non-numeric rather than crashing the round.
+                try:
+                    host_stream_id = int(raw_stream_id)
+                    host_user_id = int(raw_user_id)
+                    host_game_id = int(raw_game_id)
+                except (TypeError, ValueError):
+                    non_numeric_id_type_detected = True
+                    continue
+
                 current_stream = StreamTuple(
                     status=one_raw_stream.get("type", None),
-                    host_stream_id=one_raw_stream.get("id", None),
-                    host_user_id=one_raw_stream.get("user_id", None),
+                    host_stream_id=host_stream_id,
+                    host_user_id=host_user_id,
                     host_login=one_raw_stream.get("user_login", None),
                     host_display_name=one_raw_stream.get("user_name", None),
-                    host_game_id=one_raw_stream.get("game_id", None),
+                    host_game_id=host_game_id,
                     viewers=one_raw_stream.get("viewer_count", None),
                     started_at=one_raw_stream.get("started_at", None),
                 )
@@ -106,5 +127,9 @@ class TwitchApiClient(TwitchApiBaseClient):
 
             if not cursor or time.time() >= end_time_anchor:
                 break
+
+        # Normally, this will never happen, but it allows us to be notified if it happens.
+        if non_numeric_id_type_detected:
+            logger.warning("IMPORTANT: non-numeric ID field was detected in Helix API response while polling streams!")
 
         return streams, cursor

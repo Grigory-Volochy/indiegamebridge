@@ -11,8 +11,7 @@ class StreamerProfile(models.Model):
         help_text="Host name"
     )
 
-    host_user_id = models.CharField(
-        max_length=64,
+    host_user_id = models.BigIntegerField(
         help_text="User ID defined by host"
     )
 

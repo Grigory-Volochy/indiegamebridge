@@ -5,11 +5,10 @@ import concurrent.futures
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Avg, Count, Max, Min
 from django.utils import timezone
 
 from core.utils.twitch_api_client import TwitchApiClient
-from apps.streams.models import StreamerProfile, Stream, StreamSnapshot
+from apps.streams.models import StreamerProfile, Stream
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +138,11 @@ class Command(BaseCommand):
 
                 logger.info("Unfiltered streams fetched per poll round: %s | Language: %s", len(response_streams), the_language)
 
+                # One shared poll timestamp for every snapshot written this round.
+                # Sub-second drift across streams in the same round is irrelevant for analytics.
+                poll_now = timezone.now()
+                poll_timestamp = int(poll_now.timestamp())
+
                 # Insert/update data
                 with transaction.atomic():
                     for one_stream in response_streams:
@@ -163,22 +167,33 @@ class Command(BaseCommand):
                             profile.host_display_name = one_stream.host_display_name
                             profile.save(update_fields=["host_login", "host_display_name"])
 
-                        stream, _ = Stream.objects.update_or_create(
+                        new_snapshot = {
+                            "g": one_stream.host_game_id,
+                            "v": one_stream.viewers,
+                            "t": poll_timestamp,
+                        }
+
+                        stream, created = Stream.objects.get_or_create(
                             streamer_profile=profile,
                             host_stream_id=one_stream.host_stream_id,
                             defaults={
                                 "status": Stream.Status.LIVE,
                                 "language": the_language,
                                 "started_at": one_stream.started_at,
-                                "finished_at": timezone.now(),
+                                "finished_at": poll_now,
+                                "snapshots": [new_snapshot],
                             }
                         )
 
-                        StreamSnapshot.objects.create(
-                            stream=stream,
-                            viewers=one_stream.viewers,
-                            host_game_id=one_stream.host_game_id,
-                        )
+                        if not created:
+                            stream.snapshots.append(new_snapshot)
+                            stream.status = Stream.Status.LIVE
+                            stream.language = the_language
+                            stream.started_at = one_stream.started_at
+                            stream.finished_at = poll_now
+                            stream.save(update_fields=[
+                                "status", "language", "started_at", "finished_at", "snapshots",
+                            ])
 
                 # Normal end of the language polling
                 if not response_streams or not cursor:
@@ -202,21 +217,14 @@ class Command(BaseCommand):
         return len(dedup_ids)
 
     def _finalize_offline_streams(self, stale_stream_threshold):
-        """Transitions stale live streams to OFFLINE and replaces their snapshots with per-game metrics.
+        """Transitions stale live streams to OFFLINE and computes summary fields from `snapshots`.
 
-        Per-game `StreamSnapshot` rows are aggregated by `(stream_id, host_game_id)` in a single
-        query and written to each `Stream.game_metrics` as a list of dicts with short keys to keep
-        the JSONB payload compact: `{"g": host_game_id, "mv": max_viewers, "av": avg_viewers,
-        "d": duration_seconds}`. Stream-level `max_viewers` and `avg_viewers` (across all games,
-        weighted by snapshot count) are derived from the same per-game rows and written to the
-        stream as well. Snapshots are deleted once the metrics are persisted. Streams that have
-        <= 1 snapshot at finalize time carry too little signal to be useful, so the stream itself
-        is dropped (cascade removes any snapshot). All writes happen in one transaction so polling
-        state and finalization state stay consistent.
-
-        `d` (duration_seconds) is the time span between the first and last snapshot observed for
-        that game on this stream. Streams that switched away from a game and back will over-count
-        the time gap; this is accepted as an edge case.
+        For each stale stream, derives:
+        - `max_viewers` = max viewer value observed across all snapshots (`max(s["v"] ...)`)
+        - `host_game_ids`    = sorted distinct game ids observed (`sorted({s["g"] ...})`)
+        Then bulk-updates status=OFFLINE plus those summary fields. Streams with
+        `len(snapshots) <= 1` carry too little signal and are dropped entirely. All writes
+        happen in one transaction so the state stays consistent under failure.
 
         Args:
             stale_stream_threshold (datetime): Streams with status=LIVE and finished_at older than
@@ -225,76 +233,37 @@ class Command(BaseCommand):
         Returns:
             tuple[int, int]: (streams transitioned to OFFLINE, streams deleted for lack of data).
         """
-        stale_ids = list(
+        stale_streams = list(
             Stream.objects.filter(
                 status=Stream.Status.LIVE,
                 finished_at__lt=stale_stream_threshold,
-            ).values_list("id", flat=True)
+            ).only("id", "snapshots")
         )
 
-        if not stale_ids:
+        if not stale_streams:
             return 0, 0
 
-        # One aggregation query for every (stream, game) bucket across all stale streams.
-        per_game_rows = (
-            StreamSnapshot.objects
-            .filter(stream_id__in=stale_ids)
-            .values("stream_id", "host_game_id")
-            .annotate(
-                snapshot_count=Count("id"),
-                max_viewers=Max("viewers"),
-                avg_viewers=Avg("viewers"),
-                first_shot=Min("shot_at"),
-                last_shot=Max("shot_at"),
-            )
-        )
-
-        snapshot_totals = {}
-        viewer_sum_by_stream = {}
-        max_viewers_by_stream = {}
-        metrics_by_stream = {}
-        for row in per_game_rows:
-            sid = row["stream_id"]
-            count = row["snapshot_count"]
-            game_max = row["max_viewers"]
-            game_avg = row["avg_viewers"] or 0
-
-            snapshot_totals[sid] = snapshot_totals.get(sid, 0) + count
-            # game_avg * count == sum of viewer values for that (stream, game) bucket;
-            # summing across games gives the stream's total viewer-tally for a weighted overall avg.
-            viewer_sum_by_stream[sid] = viewer_sum_by_stream.get(sid, 0) + game_avg * count
-            max_viewers_by_stream[sid] = max(max_viewers_by_stream.get(sid, 0), game_max)
-            metrics_by_stream.setdefault(sid, []).append({
-                "g": row["host_game_id"],
-                "mv": game_max,
-                "av": int(round(game_avg)),
-                "d": int((row["last_shot"] - row["first_shot"]).total_seconds()),
-            })
-
-        # Streams missing from snapshot_totals had zero snapshots; treated the same as single-snapshot.
-        insufficient_ids = [sid for sid in stale_ids if snapshot_totals.get(sid, 0) <= 1]
-        finalize_ids = [sid for sid, total in snapshot_totals.items() if total > 1]
+        insufficient_ids = []
+        streams_to_update = []
+        for stream in stale_streams:
+            snaps = stream.snapshots or []
+            if len(snaps) <= 1:
+                insufficient_ids.append(stream.id)
+                continue
+            stream.status = Stream.Status.OFFLINE
+            stream.max_viewers = max(s["v"] for s in snaps)
+            stream.host_game_ids = sorted({s["g"] for s in snaps})
+            streams_to_update.append(stream)
 
         with transaction.atomic():
             if insufficient_ids:
                 Stream.objects.filter(id__in=insufficient_ids).delete()
 
-            if finalize_ids:
-                streams_to_update = [
-                    Stream(
-                        id=sid,
-                        status=Stream.Status.OFFLINE,
-                        game_metrics=metrics_by_stream[sid],
-                        max_viewers=max_viewers_by_stream[sid],
-                        avg_viewers=int(round(viewer_sum_by_stream[sid] / snapshot_totals[sid])),
-                    )
-                    for sid in finalize_ids
-                ]
+            if streams_to_update:
                 Stream.objects.bulk_update(
                     streams_to_update,
-                    ["status", "game_metrics", "max_viewers", "avg_viewers"],
+                    ["status", "max_viewers", "host_game_ids"],
                     batch_size=500,
                 )
-                StreamSnapshot.objects.filter(stream_id__in=finalize_ids).delete()
 
-        return len(finalize_ids), len(insufficient_ids)
+        return len(streams_to_update), len(insufficient_ids)
