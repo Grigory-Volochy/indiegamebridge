@@ -1,5 +1,6 @@
 import logging
 
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand
 from django.db.models import Count, Max
 
@@ -32,6 +33,7 @@ class Command(BaseCommand):
             .annotate(
                 tracked_streams=Count("id"),
                 peak_viewers=Max("max_viewers"),
+                languages=ArrayAgg("language", distinct=True),
             )
             .order_by("-peak_viewers")[: self.home_top_n]
         )
@@ -55,6 +57,7 @@ class Command(BaseCommand):
                 "twitch_url": f"https://twitch.tv/{profile.host_login}",
                 "tracked_streams": row["tracked_streams"],
                 "peak_viewers": row["peak_viewers"],
+                "languages": sorted(lang.upper() for lang in row["languages"] if lang),
             })
 
         total_streamers = StreamerProfile.objects.count()
