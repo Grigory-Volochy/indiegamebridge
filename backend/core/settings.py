@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.streams",
     "apps.api",
     "apps.fetch",
+    "apps.pages",
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -162,10 +163,23 @@ LOGGING = {
             "encoding": "utf-8",
             "formatter": "verbose",
         },
+        "pages_file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": str(LOG_DIR / "pages.log"),
+            "when": "midnight",
+            "backupCount": 14,
+            "encoding": "utf-8",
+            "formatter": "verbose",
+        },
     },
     "loggers": {
         "apps.fetch": {
             "handlers": ["console", "fetch_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps.pages": {
+            "handlers": ["console", "pages_file"],
             "level": "INFO",
             "propagate": False,
         },
