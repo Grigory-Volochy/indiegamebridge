@@ -19,7 +19,8 @@ class IgdbApiClient(TwitchApiBaseClient):
     """
 
     def get_games(self, limit=_DEFAULT_PAGE_SIZE, offset=0):
-        query = f"fields *; limit {limit}; offset {offset}; where genres = 32;" # TODO: use selected genres instead of hard-coded value (32 = indie games)
+        # TODO: use selected genres instead of hard-coded value (32 = indie games)
+        query = f"fields *; limit {limit}; offset {offset}; where genres = 32;"
         resp = self._request(
             "POST",
             f"{_IGDB_API_URL}/games/",
@@ -45,6 +46,28 @@ class IgdbApiClient(TwitchApiBaseClient):
         resp = self._request(
             "POST",
             f"{_IGDB_API_URL}/genres/",
+            content=query,
+            headers=_APICALYPSE_HEADERS,
+        )
+        return resp.json()
+
+    def get_games_by_ids(self, ids):
+        """Fetches game metadata for a batch of host game ids.
+
+        IGDB caps `where id = (...)` queries at 500 ids per request; the caller
+        must chunk accordingly.
+        """
+        if not ids:
+            return []
+        ids_list = ",".join(str(i) for i in ids)
+        query = (
+            f"fields id,name,summary,url,genres;"
+            f" where id = ({ids_list});"
+            f" limit {len(ids)};"
+        )
+        resp = self._request(
+            "POST",
+            f"{_IGDB_API_URL}/games/",
             content=query,
             headers=_APICALYPSE_HEADERS,
         )
