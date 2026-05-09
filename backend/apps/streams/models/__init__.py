@@ -1,5 +1,7 @@
-from apps.streams.models.stream import Stream
-from apps.streams.models.streamer_profile import StreamerProfile
+from .stream import Stream
+from .streamer_profile import StreamerProfile
+from .game import Game
+from .game_genre import GameGenre
 
 
-__all__ = ["Stream", "StreamerProfile"]
+__all__ = ["Stream", "StreamerProfile", "Game", "GameGenre"]
