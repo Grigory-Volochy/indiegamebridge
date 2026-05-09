@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.utils.twitch_api_client import TwitchApiClient
-from apps.streams.models import StreamerProfile, Stream
+from apps.streams.models import StreamerProfile, Stream, Game
 
 logger = logging.getLogger(__name__)
 
@@ -270,5 +270,16 @@ class Command(BaseCommand):
                     ["status", "max_viewers", "host_game_ids"],
                     batch_size=500,
                 )
+
+                # Insert placeholder Game rows for any newly observed game ids.
+                # IGDB enrichment is deferred to a separate command; ignore_conflicts
+                # makes this idempotent against rows already inserted by prior runs.
+                observed_game_ids = {gid for stream in streams_to_update for gid in (stream.host_game_ids or [])}
+                if observed_game_ids:
+                    Game.objects.bulk_create(
+                        [Game(host_game_id=gid) for gid in observed_game_ids],
+                        batch_size=500,
+                        ignore_conflicts=True,
+                    )
 
         return len(streams_to_update), len(insufficient_ids)
