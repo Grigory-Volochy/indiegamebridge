@@ -15,7 +15,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.fetch.management.commands.fetch_twitch_streams import Command
-from apps.streams.models import Stream, StreamerProfile
+from apps.streams.models import Game, Stream, StreamerProfile
 from core.utils.twitch_api_client import StreamTuple
 
 
@@ -328,3 +328,80 @@ class FinalizeOfflineStreamsTests(TestCase):
         self.assertEqual(ok.max_viewers, 90)
         self.assertEqual(ok.host_game_ids, [100])
         self.assertFalse(Stream.objects.filter(pk=single.pk).exists())
+
+    def test_placeholder_games_are_inserted_for_finalized_streams(self):
+        """Each unique host_game_id observed across just-finalized streams gets
+        a placeholder Game row. These rows feed the deferred IGDB enrichment."""
+        self._make_stream(
+            host_stream_id=10,
+            status=Stream.Status.LIVE,
+            finished_at=timezone.now() - timedelta(minutes=self.THRESHOLD_MINUTES + 1),
+            snapshots=[
+                {"g": 500, "v": 10, "t": 1700000000},
+                {"g": 500, "v": 12, "t": 1700000900},
+                {"g": 600, "v": 20, "t": 1700001800},
+            ],
+        )
+
+        self._run_finalize()
+
+        game_ids = sorted(Game.objects.values_list("host_game_id", flat=True))
+        self.assertEqual(game_ids, [500, 600])
+        # Placeholders carry no metadata until enrichment runs.
+        for game in Game.objects.all():
+            self.assertEqual(game.host_name, "")
+            self.assertEqual(game.host_summary, "")
+            self.assertEqual(game.host_url, "")
+            self.assertEqual(game.genres.count(), 0)
+
+    def test_placeholder_game_insert_skips_already_existing_rows(self):
+        """ignore_conflicts must keep the existing row intact rather than raising
+        or overwriting; pre-enriched data must survive a re-finalization."""
+        Game.objects.create(host_game_id=500, host_name="Already Enriched")
+
+        self._make_stream(
+            host_stream_id=11,
+            status=Stream.Status.LIVE,
+            finished_at=timezone.now() - timedelta(minutes=self.THRESHOLD_MINUTES + 1),
+            snapshots=[
+                {"g": 500, "v": 10, "t": 1700000000},
+                {"g": 600, "v": 20, "t": 1700000900},
+            ],
+        )
+
+        self._run_finalize()
+
+        self.assertEqual(Game.objects.count(), 2)
+        existing = Game.objects.get(host_game_id=500)
+        self.assertEqual(existing.host_name, "Already Enriched")
+        self.assertTrue(Game.objects.filter(host_game_id=600).exists())
+
+    def test_dropped_streams_do_not_produce_placeholder_games(self):
+        """Streams dropped for insufficient snapshots never get host_game_ids
+        finalized, so their game ids must not leak into the Game table."""
+        self._make_stream(
+            host_stream_id=12,
+            status=Stream.Status.LIVE,
+            finished_at=timezone.now() - timedelta(minutes=self.THRESHOLD_MINUTES + 1),
+            snapshots=[{"g": 700, "v": 50, "t": 1700000000}],
+        )
+
+        self._run_finalize()
+
+        self.assertFalse(Game.objects.filter(host_game_id=700).exists())
+
+    def test_low_viewer_streams_do_not_produce_placeholder_games(self):
+        """max_viewers < 3 drops the stream, so its game ids must not get rows."""
+        self._make_stream(
+            host_stream_id=13,
+            status=Stream.Status.LIVE,
+            finished_at=timezone.now() - timedelta(minutes=self.THRESHOLD_MINUTES + 1),
+            snapshots=[
+                {"g": 800, "v": 1, "t": 1700000000},
+                {"g": 800, "v": 2, "t": 1700000900},
+            ],
+        )
+
+        self._run_finalize()
+
+        self.assertFalse(Game.objects.filter(host_game_id=800).exists())
