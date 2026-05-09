@@ -132,7 +132,6 @@ class Command(BaseCommand):
                 ),
             ]
         }
-        
 
         search_results = []
         for row in top_aggregates:

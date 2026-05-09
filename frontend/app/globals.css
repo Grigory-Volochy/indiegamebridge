@@ -26,6 +26,10 @@
   /* 30px */
   --text-2xl: 1.875rem;
   --text-2xl--line-height: 2.25rem;
+  
+  /* 40px */
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 3rem;
 }
 
 :root {
