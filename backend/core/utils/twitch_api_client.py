@@ -42,6 +42,27 @@ _STR_FIELD_MAX_LENGTHS = {
 class TwitchApiClient(TwitchApiBaseClient):
     """Client for the Twitch Helix API."""
 
+    def get_games_by_ids(self, ids):
+        """Fetches Helix metadata for a batch of game/category ids.
+
+        Helix `/helix/games` accepts up to 100 ids per request via repeated
+        `id` query params; the caller must chunk accordingly. Categories that
+        are not actual games (e.g. "Just Chatting") are returned with
+        `igdb_id == ""`.
+
+        Args:
+            ids (list[int|str]): Helix game/category ids to look up.
+
+        Returns:
+            list[dict]: The `data` array from the Helix response. Each entry
+            has `id`, `name`, `box_art_url`, `igdb_id`.
+        """
+        if not ids:
+            return []
+        params = {"id": [str(i) for i in ids]}
+        resp = self._request("GET", f"{_TWITCH_API_URL}/games", params=params)
+        return resp.json().get("data", [])
+
     def get_streams(self, language, first=_DEFAULT_PAGE_SIZE, after=None):
         """Retrieves single page - up to 100 entries
 

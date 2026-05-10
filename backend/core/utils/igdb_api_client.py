@@ -4,9 +4,6 @@ from core.utils.twitch_api_base_client import TwitchApiBaseClient
 
 
 _IGDB_API_URL = "https://api.igdb.com/v4"
-# IGDB caps `limit` at 500 per request; using a small temporary value while
-# the response shape is being explored. Bump back toward 500 once that's done.
-_DEFAULT_PAGE_SIZE = 3
 _APICALYPSE_HEADERS = {"Content-Type": "text/plain"}
 
 
@@ -18,30 +15,7 @@ class IgdbApiClient(TwitchApiBaseClient):
     ``content=<query>`` and ``headers={"Content-Type": "text/plain"}``.
     """
 
-    def get_games(self, limit=_DEFAULT_PAGE_SIZE, offset=0):
-        # TODO: use selected genres instead of hard-coded value (32 = indie games)
-        query = f"fields *; limit {limit}; offset {offset}; where genres = 32;"
-        resp = self._request(
-            "POST",
-            f"{_IGDB_API_URL}/games/",
-            content=query,
-            headers=_APICALYPSE_HEADERS,
-        )
-        return resp.json()
-
-    def iter_games(self, page_size=_DEFAULT_PAGE_SIZE):
-        offset = 0
-        while True:
-            data = self.get_games(limit=page_size, offset=offset)
-            if not data:
-                break
-            yield from data
-            if len(data) < page_size:
-                break
-            offset += page_size
-            break   # !!! LIMIT FOR TEST ONLY !!!
-
-    def get_genres(self, limit=_DEFAULT_PAGE_SIZE, offset=0):
+    def get_genres(self, limit=500, offset=0):
         query = f"fields *; limit {limit}; offset {offset};"
         resp = self._request(
             "POST",
