@@ -6,8 +6,14 @@ from apps.streams.models.streamer_profile import StreamerProfile
 
 class Stream(models.Model):
     class Status(models.TextChoices):
+        # With the 'live' status streams continue to collect snapshots.
         LIVE = "live", "Live"
+
+        # To get the 'offline' status, stream needs to fit condition (number of max viewers, number of snapshots, etc).
         OFFLINE = "offline", "Offline"
+
+        # To get the 'approval' status, stream must to have valid game ID at least in one of its snapshot, otherwise the stream is deleted.
+        APPROVED = "approved", "Approved"
 
     streamer_profile = models.ForeignKey(
         StreamerProfile,

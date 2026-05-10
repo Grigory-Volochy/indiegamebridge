@@ -14,9 +14,11 @@ _IGDB_BATCH_SIZE = 500
 
 class Command(BaseCommand):
     help = (
-        "Enriches placeholder Game rows with IGDB metadata. A Game is treated as"
-        " unenriched if its `genres` M2M is empty - placeholders are inserted by"
-        " the stream-finalization path with no genres until this command runs."
+        "Enriches `isgame` Game rows with IGDB metadata (summary, url, genres)."
+        " A Game is treated as unenriched if its `genres` M2M is empty AND it"
+        " has been categorized as `isgame` by the categorize_games command."
+        " IGDB lookup uses the `igdb_game_id` field, which Helix populated"
+        " during categorization."
     )
 
     def add_arguments(self, parser):
@@ -32,7 +34,10 @@ class Command(BaseCommand):
         limit = options.get("limit")
 
         unenriched_qs = (
-            Game.objects.filter(genres__isnull=True).order_by("id")
+            Game.objects.filter(
+                category=Game.Category.ISGAME,
+                genres__isnull=True,
+            ).order_by("id")
         )
         if limit:
             unenriched_qs = unenriched_qs[:limit]
@@ -66,7 +71,7 @@ class Command(BaseCommand):
             yield seq[i:i + n]
 
     def _enrich_chunk(self, client, chunk, genres_by_host_id):
-        chunk_ids = [g.host_game_id for g in chunk]
+        chunk_ids = [g.igdb_game_id for g in chunk]
         response = client.get_games_by_ids(chunk_ids)
         response_by_id = {item["id"]: item for item in response}
 
@@ -86,7 +91,7 @@ class Command(BaseCommand):
         through_model = Game.genres.through
 
         for game in chunk:
-            payload = response_by_id.get(game.host_game_id)
+            payload = response_by_id.get(game.igdb_game_id)
             if not payload:
                 # IGDB has no record for this id; row stays unenriched and will be
                 # retried on the next run. Acceptable for now.
