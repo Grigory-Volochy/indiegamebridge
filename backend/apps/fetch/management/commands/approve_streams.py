@@ -1,17 +1,26 @@
 import logging
 
 from django.core.management.base import BaseCommand
+from django.db.models import BigIntegerField, Exists, Lookup, OuterRef
 
 from apps.streams.models import Game, Stream
 
 logger = logging.getLogger(__name__)
 
 
-# Default cap on how many OFFLINE streams a single approve/delete pass touches.
-# Each batch is its own SQL statement (one transaction); chosen to keep WAL
-# size and lock duration bounded on the initial ~1M-row sweep. Steady-state
-# runs after that will normally fit in a single batch.
-_DEFAULT_BATCH_SIZE = 100_000
+@BigIntegerField.register_lookup
+class _MemberOf(Lookup):
+    # Postgres `lhs = ANY(rhs_array)`. Lets the planner use the unique index
+    # on Game.host_game_id when joining against Stream.host_game_ids, instead
+    # of materializing a multi-MB ARRAY[...] literal of every categorized id.
+    # Emitted directly (no outer parens) because `= ANY(...)` is a quantified
+    # comparison, not a value expression.
+    lookup_name = "memberof"
+
+    def as_sql(self, compiler, connection):
+        lhs_sql, lhs_params = self.process_lhs(compiler, connection)
+        rhs_sql, rhs_params = self.process_rhs(compiler, connection)
+        return f"{lhs_sql} = ANY({rhs_sql})", (*lhs_params, *rhs_params)
 
 
 class Command(BaseCommand):
@@ -35,42 +44,36 @@ class Command(BaseCommand):
             help="Report would-approve / would-delete / would-keep counts without"
                 " modifying anything.",
         )
-        parser.add_argument(
-            "--batch-size",
-            type=int,
-            default=_DEFAULT_BATCH_SIZE,
-            help=f"Maximum streams processed per UPDATE/DELETE statement."
-                f" Default: {_DEFAULT_BATCH_SIZE}. Lower values reduce lock duration"
-                f" and WAL pressure at the cost of more round-trips.",
-        )
 
     def handle(self, *args, **options):
         dry_run = options.get("dry_run", False)
-        batch_size = options.get("batch_size") or _DEFAULT_BATCH_SIZE
 
-        isgame_ids = list(
-            Game.objects.filter(category=Game.Category.ISGAME)
-            .values_list("host_game_id", flat=True)
-        )
-        if not isgame_ids:
+        if not Game.objects.filter(category=Game.Category.ISGAME).exists():
             self.stdout.write("No `isgame` games. Nothing to approve.")
             return
 
-        new_ids = list(
-            Game.objects.filter(category=Game.Category.NEW)
-            .values_list("host_game_id", flat=True)
-        )
-
         offline = Stream.objects.filter(status=Stream.Status.OFFLINE)
 
-        to_approve = offline.filter(host_game_ids__overlap=isgame_ids)
-
-        # "Second chance": keep OFFLINE if no isgame overlap but at least one
-        # `new` id - re-evaluated on the next run after more categorization.
-        to_delete = (
-            offline.exclude(host_game_ids__overlap=isgame_ids)
-                   .exclude(host_game_ids__overlap=new_ids)
+        # EXISTS against Game by host_game_id (its unique index) avoids
+        # materializing every isgame/new id as an ARRAY[...] literal -
+        # which previously made the DELETE seq-scan offline streams while
+        # comparing each row's array against a million-element array on
+        # every batch.
+        has_isgame = Exists(
+            Game.objects.filter(
+                category=Game.Category.ISGAME,
+                host_game_id__memberof=OuterRef("host_game_ids"),
+            )
         )
+        has_isgame_or_new = Exists(
+            Game.objects.filter(
+                category__in=[Game.Category.ISGAME, Game.Category.NEW],
+                host_game_id__memberof=OuterRef("host_game_ids"),
+            )
+        )
+
+        to_approve = offline.filter(has_isgame)
+        to_delete = offline.filter(~has_isgame_or_new)
 
         if dry_run:
             approve_count = to_approve.count()
@@ -81,45 +84,13 @@ class Command(BaseCommand):
                 f"DRY RUN over {offline_count} offline streams:\n"
                 f"  would approve: {approve_count}\n"
                 f"  would delete:  {delete_count}\n"
-                f"  would keep:    {keep_count} (only `new` overlap - retried next run)\n"
-                f"  ({len(isgame_ids)} games isgame, {len(new_ids)} games new.)"
+                f"  would keep:    {keep_count} (only `new` overlap - retried next run)"
             ))
             return
 
-        approved_count = self._batched_update(
-            to_approve,
-            batch_size=batch_size,
-            update_fields={"status": Stream.Status.APPROVED},
-        )
-        deleted_count = self._batched_delete(to_delete, batch_size=batch_size)
+        approved_count = to_approve.update(status=Stream.Status.APPROVED)
+        deleted_count, _ = to_delete.delete()
 
         self.stdout.write(self.style.SUCCESS(
             f"Approved {approved_count} streams, deleted {deleted_count} streams."
-            f" ({len(isgame_ids)} games isgame, {len(new_ids)} games new.)"
         ))
-
-    @staticmethod
-    def _batched_update(qs, batch_size, update_fields):
-        """Drains `qs` in batches of `batch_size`, applying `update_fields` to
-        each batch in its own statement. Returns the total number of rows
-        updated across all batches."""
-        total = 0
-        while True:
-            batch_ids = list(qs.values_list("id", flat=True)[:batch_size])
-            if not batch_ids:
-                break
-            total += Stream.objects.filter(id__in=batch_ids).update(**update_fields)
-        return total
-
-    @staticmethod
-    def _batched_delete(qs, batch_size):
-        """Drains `qs` in batches of `batch_size`, issuing a DELETE per batch.
-        Returns the total number of Stream rows deleted across all batches."""
-        total = 0
-        while True:
-            batch_ids = list(qs.values_list("id", flat=True)[:batch_size])
-            if not batch_ids:
-                break
-            deleted, _ = Stream.objects.filter(id__in=batch_ids).delete()
-            total += deleted
-        return total
