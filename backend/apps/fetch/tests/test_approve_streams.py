@@ -187,9 +187,9 @@ class ApproveStreamsTests(TestCase):
         leave_alone_live.refresh_from_db()
         self.assertEqual(leave_alone_live.status, Stream.Status.LIVE)
 
-    def test_batch_size_processes_all_rows_across_multiple_batches(self):
-        """`--batch-size 1` must still process every eligible row, just in
-        separate statements. Smoke test for the batched update/delete loops."""
+    def test_processes_all_eligible_rows_in_one_run(self):
+        """All eligible rows are processed in a single sweep (one UPDATE,
+        one DELETE)."""
         self._make_isgame(host_game_id=100)
         self._make_isnongame(host_game_id=509658)
 
@@ -202,7 +202,7 @@ class ApproveStreamsTests(TestCase):
             for i in range(10, 13)  # 3 streams to delete
         ]
 
-        call_command("approve_streams", "--batch-size", "1", stdout=mock.Mock())
+        call_command("approve_streams", stdout=mock.Mock())
 
         for stream in approve_streams:
             stream.refresh_from_db()
