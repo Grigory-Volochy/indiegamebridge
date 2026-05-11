@@ -4,7 +4,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand
 from django.db.models import Count, Max
 
-from apps.streams.models import Stream, StreamerProfile
+from apps.streams.models import Game, GameGenre, Stream, StreamerProfile
 from apps.pages.models import CachedPage
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,6 @@ class Command(BaseCommand):
             "filter_name": "",
             "filter_label": "",
             "multi_values": [],
-            "multi_labels": [],
             "multi_default": [],
             "single_default": "",
             "min_values": [],
@@ -40,22 +39,60 @@ class Command(BaseCommand):
         for key, value in kwargs.items():
             form_field[key] = value
         return form_field
+    
+    def _get_quant_filter_values(self):
+        return [
+            {"v": "3", "l": "3"},
+            {"v": "10", "l": "10"},
+            {"v": "50", "l": "50"},
+            {"v": "100", "l": "100"},
+            {"v": "500", "l": "500"},
+            {"v": "1000", "l": "1000"},
+            {"v": "5000", "l": "5000"},
+            {"v": "10000", "l": "10000"},
+            {"v": "50000", "l": "50000"},
+            {"v": "100000", "l": "100000"}
+        ]
 
-    def _update_home_page(self):
-        # Aggregate per streamer over their finalized (offline) streams only.
-        # Live streams have max_viewers=0 until finalize_offline_streams runs,
-        # so including them would skew the search results.
+    def _get_time_filter_values(self):
+        return [
+            {"v": "20m", "l": "20 minutes"},
+            {"v": "1h", "l": "1 Hour"},
+            {"v": "2h", "l": "2 Hours"},
+            {"v": "3h", "l": "3 Hours"},
+            {"v": "6h", "l": "6 Hours"},
+            {"v": "9h", "l": "9 Hours"},
+            {"v": "12h", "l": "12 Hours"},
+            {"v": "24h", "l": "24 Hours"}
+        ]
+    
+    def _get_demo_search_results(self):
+        # Streamers qualify if they have at least one APPROVED stream in English.
+        # Aggregates run over all of their APPROVED streams (any language) so
+        # totals reflect the streamer's full footprint, not just English ones.
         # Future ExcludedStreamers integration: add `.exclude(streamer_profile_id__in=excluded_ids)`
-        # to this queryset before the slice.
+        # to the top_aggregates queryset before the slice.
+        english_streamer_ids = (
+            Stream.objects.filter(
+                status=Stream.Status.APPROVED,
+                language="en",
+            )
+            .values_list("streamer_profile_id", flat=True)
+            .distinct()
+        )
+
         top_aggregates = list(
-            Stream.objects.filter(status=Stream.Status.OFFLINE)
+            Stream.objects.filter(
+                status=Stream.Status.APPROVED,
+                streamer_profile_id__in=english_streamer_ids,
+            )
             .values("streamer_profile_id")
             .annotate(
                 tracked_streams=Count("id"),
                 peak_viewers=Max("max_viewers"),
                 languages=ArrayAgg("language", distinct=True),
             )
-            .order_by("-peak_viewers")[: self.home_top_n]
+            .order_by("-peak_viewers", "-tracked_streams")[: self.home_top_n]
         )
 
         profile_ids = [row["streamer_profile_id"] for row in top_aggregates]
@@ -66,71 +103,31 @@ class Command(BaseCommand):
             )
         }
 
-        search_form = {
-            "title": "Filter Streamers",
-            "aria_label": "Demonstration search form",
-            "filters": [
-                self._get_search_form_field(
-                    filter_type="dropdown",
-                    filter_name="language",
-                    filter_label="Language",
-                    multi_values=["en", "fr", "de"],
-                    multi_labels=["English", "French", "German"],
-                    single_default="en",
-                ),
-                self._get_search_form_field(
-                    filter_type="range",
-                    filter_name="avg_viewers",
-                    filter_label="Avg Viewers",
-                    min_values=["min", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    min_labels=["min", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    min_default="min",
-                    max_values=["max", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    max_labels=["max", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    max_default="max",
-                ),
-                self._get_search_form_field(
-                    filter_type="range",
-                    filter_name="max_viewers",
-                    filter_label="Max Viewers",
-                    min_values=["min", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    min_labels=["min", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    min_default="min",
-                    max_values=["max", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    max_labels=["max", "3", "10", "50", "100", "500", "1000", "5000", "10000", "50000", "100000"],
-                    max_default="max",
-                ),
-                self._get_search_form_field(
-                    filter_type="range",
-                    filter_name="avg_duration",
-                    filter_label="Avg Duration",
-                    min_values=["min", "20m", "1h", "2h", "3h", "6h", "9h", "12h", "24h"],
-                    min_labels=["min", "20 minutes", "1 Hour", "2 Hours", "3 Hours", "6 Hours", "9 Hours", "12 Hours", "24 Hours"],
-                    min_default="min",
-                    max_values=["max", "20m", "1h", "2h", "3h", "6h", "9h", "12h", "24h"],
-                    max_labels=["max", "20 minutes", "1 Hour", "2 Hours", "3 Hours", "6 Hours", "9 Hours", "12 Hours", "24 Hours"],
-                    max_default="max",
-                ),
-                self._get_search_form_field(
-                    filter_type="range",
-                    filter_name="max_duration",
-                    filter_label="Max Duration",
-                    min_values=["min", "20m", "1h", "2h", "3h", "6h", "9h", "12h", "24h"],
-                    min_labels=["min", "20 minutes", "1 Hour", "2 Hours", "3 Hours", "6 Hours", "9 Hours", "12 Hours", "24 Hours"],
-                    min_default="min",
-                    max_values=["max", "20m", "1h", "2h", "3h", "6h", "9h", "12h", "24h"],
-                    max_labels=["max", "20 minutes", "1 Hour", "2 Hours", "3 Hours", "6 Hours", "9 Hours", "12 Hours", "24 Hours"],
-                    max_default="max",
-                ),
-                self._get_search_form_field(
-                    filter_type="multiselect",
-                    filter_name="week_days",
-                    filter_label="Days of Week",
-                    multi_values=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-                    multi_labels=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-                    multi_default=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-                ),
-            ]
+        # Attach the 20 most recent APPROVED streams per top streamer. One small
+        # query per streamer (10 total) is simpler than a window-function workaround
+        # and trivial at this scale (hourly cache rebuild).
+        streams_by_profile = {
+            profile_id: list(
+                Stream.objects.filter(
+                    streamer_profile_id=profile_id,
+                    status=Stream.Status.APPROVED,
+                ).order_by("-finished_at")[:20]
+            )
+            for profile_id in profile_ids
+        }
+
+        # Resolve every referenced game in a single query.
+        all_game_ids = {
+            gid
+            for streams in streams_by_profile.values()
+            for stream in streams
+            for gid in (stream.host_game_ids or [])
+        }
+        games_by_host_id = {
+            game.host_game_id: game
+            for game in Game.objects.filter(host_game_id__in=all_game_ids).only(
+                "host_game_id", "host_name",
+            )
         }
 
         search_results = []
@@ -138,6 +135,27 @@ class Command(BaseCommand):
             profile = profiles_by_id.get(row["streamer_profile_id"])
             if profile is None:
                 continue
+
+            streams_payload = []
+            for stream in streams_by_profile.get(profile.id, []):
+                games_payload = []
+                for gid in (stream.host_game_ids or []):
+                    game = games_by_host_id.get(gid)
+                    if game is None:
+                        continue
+                    games_payload.append({
+                        "host_game_id": game.host_game_id,
+                        "host_name": game.host_name,
+                    })
+                streams_payload.append({
+                    "host_stream_id": stream.host_stream_id,
+                    "language": stream.language,
+                    "max_viewers": stream.max_viewers,
+                    "started_at": stream.started_at.isoformat(),
+                    "finished_at": stream.finished_at.isoformat(),
+                    "games": games_payload,
+                })
+
             search_results.append({
                 "display_name": profile.host_display_name,
                 "login": profile.host_login,
@@ -145,23 +163,109 @@ class Command(BaseCommand):
                 "tracked_streams": row["tracked_streams"],
                 "peak_viewers": row["peak_viewers"],
                 "languages": sorted(lang.upper() for lang in row["languages"] if lang),
+                "streams": streams_payload,
             })
 
-        total_streamers = StreamerProfile.objects.count()
-        total_streams = Stream.objects.count()
+        return search_results
+
+    def _get_search_form(self):
+        game_genres = GameGenre.objects.values_list("host_genre_id", "host_name")
+        return {
+            "title": "Search Streamers",
+            "aria_label": "Demonstration search form",
+            "filters": [
+                self._get_search_form_field(
+                    filter_type="dropdown",
+                    filter_name="language",
+                    filter_label="Language",
+                    multi_values=[
+                        {"value": "en", "l": "English"},
+                        {"value": "fr", "l": "French"},
+                        {"value": "de", "l": "German"}
+                    ],
+                    single_default="en",
+                ),
+                self._get_search_form_field(
+                    filter_type="range",
+                    filter_name="avg_viewers",
+                    filter_label="Avg Viewers",
+                    min_values=[{"v": "min", "l": "min"}] + self._get_quant_filter_values(),
+                    min_default="min",
+                    max_values=[{"v": "max", "l": "max"}] + self._get_quant_filter_values(),
+                    max_default="max",
+                ),
+                self._get_search_form_field(
+                    filter_type="range",
+                    filter_name="max_viewers",
+                    filter_label="Max Viewers",
+                    min_values=[{"v": "min", "l": "min"}] + self._get_quant_filter_values(),
+                    min_default="min",
+                    max_values=[{"v": "max", "l": "max"}] + self._get_quant_filter_values(),
+                    max_default="max",
+                ),
+                self._get_search_form_field(
+                    filter_type="range",
+                    filter_name="avg_duration",
+                    filter_label="Avg Duration",
+                    min_values=[{"v": "min", "l": "min"}] + self._get_time_filter_values(),
+                    min_default="min",
+                    max_values=[{"v": "max", "l": "max"}] + self._get_time_filter_values(),
+                    max_default="max",
+                ),
+                self._get_search_form_field(
+                    filter_type="range",
+                    filter_name="max_duration",
+                    filter_label="Max Duration",
+                    min_values=[{"v": "min", "l": "min"}] + self._get_time_filter_values(),
+                    min_default="min",
+                    max_values=[{"v": "max", "l": "max"}] + self._get_time_filter_values(),
+                    max_default="max",
+                ),
+                self._get_search_form_field(
+                    filter_type="multiselect",
+                    filter_name="genres",
+                    filter_label="Game Genres",
+                    multi_values=[{"v": str(one_value), "l": one_label} for one_value, one_label in game_genres],
+                    multi_default=["4", "5", "12", "32", "24"],
+                ),
+                self._get_search_form_field(
+                    filter_type="multiselect",
+                    filter_name="week_days",
+                    filter_label="Days of Week",
+                    multi_values=[
+                        {"v": "mon", "l": "Mon"},
+                        {"v": "tue", "l": "Tue"},
+                        {"v": "wed", "l": "Wed"},
+                        {"v": "thu", "l": "Thu"},
+                        {"v": "fri", "l": "Fri"},
+                        {"v": "sat", "l": "Sat"},
+                        {"v": "sun", "l": "Sun"},
+                    ],
+                    multi_default=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                ),
+            ],
+            "button_text": "Search",
+            "demo_title": f"Note:",
+            "demo_note": f"The search form is a demo example of the real search form which currently is under active development."
+                f" The results below fit the the real search results for the search parameters prefilled in the form.",
+        }
+
+    def _update_home_page(self):
+        total_streamers = StreamerProfile.objects.filter(streams__status=Stream.Status.APPROVED).distinct().count()
+        total_streams = Stream.objects.filter(status=Stream.Status.APPROVED).count()
 
         content = {
             "title": f"IndieGameBridge",
             "description": f"Find Twitch streamers worth pitching your indie game to",
-            "info": f"Currently tracking {total_streamers} streamers across {total_streams} observed streams",
+            "info": f"Currently tracking {total_streamers:,} streamers across {total_streams:,} observed streams",
             "project_goal": {
                 "title": f"What is the project created for",
                 "description": f"The project aims to help indie developers find and collaborate with streamers who regularly broadcast specific game genres to a relevant audience."
                     f" The platform accumulates only statistics data based on publicly available information provided by the Twitch streaming platform"
                     f" via the Helix API. We do not collect or share any private information. We only provide a link to the Twitch channel for the tracked streamers.",
             },
-            "search_form": search_form,
-            "search_results": search_results,
+            "search_form": self._get_search_form(),
+            "search_results": self._get_demo_search_results(),
             "roadmap": {
                 "title": f"What's Coming",
                 "description": f"The project is in an active development stage. The ranking table above is showing real data, which is updated hourly, but only for"
@@ -211,6 +315,6 @@ class Command(BaseCommand):
         )
 
         logger.info(
-            "Home page cache updated: %s rows, %s total streamers, %s total streams",
-            len(search_results), total_streamers, total_streams,
+            "Home page cache updated:%s total streamers, %s total streams",
+            total_streamers, total_streams,
         )

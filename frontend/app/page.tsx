@@ -1,14 +1,5 @@
 import { Fragment } from "react/jsx-runtime";
-import { SearchStreamersForm, SearchForm } from "./_components";
-
-type SearchResults = {
-    display_name: string;
-    login: string;
-    twitch_url: string;
-    tracked_streams: number;
-    peak_viewers: number;
-    languages: string[];
-};
+import { SearchStreamersForm, SearchForm, SearchResult, SearchResultsList } from "./_components";
 
 type Section = {
     title: string;
@@ -33,7 +24,7 @@ type HomePageContent = {
     info: string;
     project_goal: Section;
     search_form: SearchForm;
-    search_results: SearchResults[];
+    search_results: SearchResult[];
     methodology: Section;
     roadmap: FeaturedSection;
     data_source: string;
@@ -72,9 +63,10 @@ export default async function Home() {
                     </div>
                 </section>
 
-                {/* Demo Search Results */}
+                {/* Demo Search */}
                 <section>
                     <div className="max-w-[1000] mx-auto pt-4 pb-16">
+                        <SearchStreamersForm search_form={content.search_form}></SearchStreamersForm>
                         <div className="my-8 p-6 border border-orange-500 rounded-sm bg-white shadow-sm shadow-gray-200">
                             <h2 className="text-xl mb-4">{content.cta.title}</h2>
                             <form>
@@ -83,11 +75,13 @@ export default async function Home() {
                                     className="bg-white px-4 py-3 rounded-sm text-black min-w-80 border border-gray-200 focus-visible:outline-gray-400"
                                     placeholder={content.cta.input_placeholder}
                                     defaultValue="" />
-                                <button type="submit" className="bg-orange-500 px-8 py-3 ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200">{content.cta.btn_text}</button>
+                                <button type="submit"
+                                    className="bg-orange-500 px-8 py-3 ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200 min-w-40"
+                                >{content.cta.btn_text}</button>
                                 </fieldset>
                             </form>
                         </div>
-                        <SearchStreamersForm search_form={content.search_form}></SearchStreamersForm>
+                        <SearchResultsList search_results={content.search_results}></SearchResultsList>
                     </div>
                 </section>
 
@@ -119,7 +113,9 @@ export default async function Home() {
                         <fieldset>
                             <input type="email"
                                 className="bg-white px-4 py-3 rounded-sm text-black min-w-80 focus-visible:outline-gray-400" placeholder={content.cta.input_placeholder} defaultValue="" />
-                            <button type="submit" className="bg-orange-500 px-8 py-3 ml-3 rounded-sm hover:bg-orange-600 cursor-pointer">{content.cta.btn_text}</button>
+                            <button type="submit"
+                                className="bg-orange-500 px-8 py-3 ml-3 rounded-sm hover:bg-orange-600 cursor-pointer min-w-40"
+                            >{content.cta.btn_text}</button>
                         </fieldset>
                     </form>
                 </section>
