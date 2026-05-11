@@ -52,82 +52,81 @@ export default async function Home() {
 
     return (
         <Fragment>
+            {/* Header */}
+            <header className="pt-16 pb-12 px-6 bg-brand-blue text-white shadow-sm shadow-gray-200">
+                <div className="max-w-[1000] mx-auto">
+                    <h1 className="text-3xl font-bold">{content.title}</h1>
+                    <p className="mt-6 text-lg">{content.description}</p>
+                    <p className="mt-6 text-sm opacity-70">{content.info}</p>
+                </div>
+            </header>
 
-        {/* Header */}
-        <header className="pt-16 pb-12 px-6 bg-brand-blue text-white shadow-sm shadow-gray-200">
-            <div className="max-w-[1000] mx-auto">
-            <h1 className="text-3xl font-bold">{content.title}</h1>
-            <p className="mt-6 text-lg">{content.description}</p>
-            <p className="mt-6 text-sm opacity-70">{content.info}</p>
-            </div>
-        </header>
+            {/* Main */}
+            <main className="w-full">
 
-        {/* Main */}
-        <main className="w-full">
+                {/* Project Goal */}
+                <section>
+                    <div className="max-w-[1000] mx-auto pt-16 pb-8">
+                        <h2 className="text-2xl font-bold mb-4">{content.project_goal.title}</h2>
+                        <p>{content.project_goal.description}</p>
+                    </div>
+                </section>
 
-            {/* Project Goal */}
-            <section>
-            <div className="max-w-[1000] mx-auto pt-16 pb-8">
-                <h2 className="text-2xl font-bold mb-4">{content.project_goal.title}</h2>
-                <p>{content.project_goal.description}</p>
-            </div>
-            </section>
+                {/* Demo Search Results */}
+                <section>
+                    <div className="max-w-[1000] mx-auto pt-4 pb-16">
+                        <div className="my-8 p-6 border border-orange-500 rounded-sm bg-white shadow-sm shadow-gray-200">
+                            <h2 className="text-xl mb-4">{content.cta.title}</h2>
+                            <form>
+                                <fieldset>
+                                <input type="email" id="top_cta_email" name="email" required={true}
+                                    className="bg-white px-4 py-3 rounded-sm text-black min-w-80 border border-gray-200 focus-visible:outline-gray-400"
+                                    placeholder={content.cta.input_placeholder}
+                                    defaultValue="" />
+                                <button type="submit" className="bg-orange-500 px-8 py-3 ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200">{content.cta.btn_text}</button>
+                                </fieldset>
+                            </form>
+                        </div>
+                        <SearchStreamersForm search_form={content.search_form}></SearchStreamersForm>
+                    </div>
+                </section>
 
-            {/* Demo Search Results */}
-            <section>
-            <div className="max-w-[1000] mx-auto pt-4 pb-16">
-                <div className="my-8 p-6 border border-orange-500 rounded-sm bg-white shadow-sm shadow-gray-200">
-                    <h2 className="text-xl mb-4">{content.cta.title}</h2>
-                    <form>
+                {/* Methodology */}
+                <section className="w-full">
+                    <div className="max-w-[1000] mx-auto py-8">
+                        <h2>{content.methodology.title}</h2>
+                        <p>{content.methodology.description}</p>
+                    </div>
+                </section>
+                <section className="border-t border-gray-200 shadow-sm shadow-gray-200">
+                    <div className="max-w-[1000] mx-auto py-16">
+                        <h2 className="text-2xl font-bold mb-4">{content.roadmap.title}</h2>
+                        <p>{content.roadmap.description}</p>
+                        <ul>
+                        {content.roadmap.features.map((feature, index) => (
+                            <li key={"coming-feature-" + index}>{feature}</li>
+                        ))}
+                        </ul>
+                    </div>
+                </section>
+            </main>
+
+            {/* Footer */}
+            <footer className="pt-16 pb-12 px-6 bg-brand-blue text-white">
+                <section className="max-w-[1000] mx-auto">
+                    <h2 className="mb-5 text-xl">{content.cta.title}</h2>
+                    <form className="mb-32">
                         <fieldset>
-                        <input type="email" id="top_cta_email" name="email" required={true}
-                            className="bg-white px-4 py-3 rounded-sm text-black min-w-80 border border-gray-200 focus-visible:outline-gray-400"
-                            placeholder={content.cta.input_placeholder}
-                            defaultValue="" />
-                        <button type="submit" className="bg-orange-500 px-8 py-3 ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200">{content.cta.btn_text}</button>
+                            <input type="email"
+                                className="bg-white px-4 py-3 rounded-sm text-black min-w-80 focus-visible:outline-gray-400" placeholder={content.cta.input_placeholder} defaultValue="" />
+                            <button type="submit" className="bg-orange-500 px-8 py-3 ml-3 rounded-sm hover:bg-orange-600 cursor-pointer">{content.cta.btn_text}</button>
                         </fieldset>
                     </form>
-                </div>
-                <SearchStreamersForm search_form={content.search_form}></SearchStreamersForm>
-            </div>
-            </section>
-
-            {/* Methodology */}
-            <section className="w-full">
-            <div className="max-w-[1000] mx-auto py-8">
-                <h2>{content.methodology.title}</h2>
-                <p>{content.methodology.description}</p>
-            </div>
-            </section>
-            <section className="border-t border-gray-200 shadow-sm shadow-gray-200">
-            <div className="max-w-[1000] mx-auto py-16">
-                <h2 className="text-2xl font-bold mb-4">{content.roadmap.title}</h2>
-                <p>{content.roadmap.description}</p>
-                <ul>
-                {content.roadmap.features.map((feature, index) => (
-                    <li key={"coming-feature-" + index}>{feature}</li>
-                ))}
-                </ul>
-            </div>
-            </section>
-        </main>
-
-        {/* Footer */}
-        <footer className="pt-16 pb-12 px-6 bg-brand-blue text-white">
-            <section className="max-w-[1000] mx-auto">
-            <h2 className="mb-5 text-xl">{content.cta.title}</h2>
-            <form className="mb-32">
-                <fieldset>
-                <input type="email"
-                    className="bg-white px-4 py-3 rounded-sm text-black min-w-80 focus-visible:outline-gray-400" placeholder={content.cta.input_placeholder} defaultValue="" />
-                <button type="submit" className="bg-orange-500 px-8 py-3 ml-3 rounded-sm hover:bg-orange-600 cursor-pointer">{content.cta.btn_text}</button>
-                </fieldset>
-            </form>
-            </section>
-            <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
-                {content.data_source}
-            </section>
-        </footer>
+                </section>
+                <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
+                    {content.data_source}
+                </section>
+            </footer>
         </Fragment>
     );
 }
