@@ -59,3 +59,8 @@ class Game(models.Model):
         choices=Category.choices,
         help_text="Current status of the game entry. 'New' on insertion, and either 'Is Game' or 'Is non-Game' on data enrichment."
     )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["category"], name="game_category_idx"),
+        ]
