@@ -74,6 +74,14 @@ class Stream(models.Model):
         ]
         indexes = [
             GinIndex(fields=["host_game_ids"], name="stream_host_game_ids_gin"),
+            # Targets _finalize_offline_streams: filter(status=LIVE, finished_at__lt=...).
+            # LIVE is a tiny fraction of total rows, so the partial index stays small
+            # and the planner can walk it directly instead of seq-scanning the table.
+            models.Index(
+                fields=["finished_at"],
+                name="stream_live_finished_at_idx",
+                condition=models.Q(status="live"),
+            ),
         ]
 
     def __str__(self):
