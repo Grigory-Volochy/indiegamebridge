@@ -2,6 +2,8 @@
 
 @theme {
   --color-brand-blue: #003d5b;
+  --color-twitch-brand: #9146ff;
+  --color-twitch-brand-dark: #853af3;
 
   /* 14px */
   --text-xs: 0.875rem;

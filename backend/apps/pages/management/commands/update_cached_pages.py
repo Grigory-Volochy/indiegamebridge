@@ -70,15 +70,31 @@ class Command(BaseCommand):
         ]
     
     def _get_demo_search_results(self):
-        # Streamers qualify if they have at least one APPROVED stream in English.
-        # Aggregates run over all of their APPROVED streams (any language) so
-        # totals reflect the streamer's full footprint, not just English ones.
+        # Demo display filters - hardcoded here, will be exposed via the search
+        # form in the real search. Applied both to qualifier (which streamers
+        # appear in the top 10) and to attached streams (which streams render
+        # under each streamer), so the two stay in sync - no streamer can rank
+        # in the top 10 with zero matching streams to show.
+        # Aggregates still run over every APPROVED stream so totals reflect the
+        # streamer's full footprint, not the filtered slice.
         # Future ExcludedStreamers integration: add `.exclude(streamer_profile_id__in=excluded_ids)`
         # to the top_aggregates queryset before the slice.
-        english_streamer_ids = (
-            Stream.objects.filter(
+        demo_window_start = timezone.now() - timedelta(days=7)
+        demo_weekdays = [1, 5, 6, 7]  # ISO weekday: Mon=1, Fri=5, Sat=6, Sun=7
+        demo_genre_ids = [4, 5, 12, 32, 24]  # GameGenre.host_genre_id values
+
+        # Genre match goes directly against the denormalized Stream.genre_ids
+        # (populated by enrich_igdb_games + the one-shot backfill_stream_genre_ids
+        # command). The GIN index on genre_ids handles the overlap; the RHS stays
+        # tiny regardless of how many games map to those genres.
+        qualifying_streamer_ids = (
+            Stream.objects.annotate(finished_dow=ExtractIsoWeekDay("finished_at"))
+            .filter(
                 status=Stream.Status.APPROVED,
                 language="en",
+                finished_at__gte=demo_window_start,
+                finished_dow__in=demo_weekdays,
+                genre_ids__overlap=demo_genre_ids,
             )
             .values_list("streamer_profile_id", flat=True)
             .distinct()
@@ -87,7 +103,7 @@ class Command(BaseCommand):
         top_aggregates = list(
             Stream.objects.filter(
                 status=Stream.Status.APPROVED,
-                streamer_profile_id__in=english_streamer_ids,
+                streamer_profile_id__in=qualifying_streamer_ids,
             )
             .values("streamer_profile_id")
             .annotate(
@@ -106,21 +122,18 @@ class Command(BaseCommand):
             )
         }
 
-        # Attach each top streamer's APPROVED streams from the last 14 days that
-        # were broadcast on Fri/Sat/Sun (by started_at). Both filters are hardcoded
-        # for the demo; the real search will expose them in the form. One small
+        # Attach each qualifying streamer's matching APPROVED streams. One small
         # query per streamer (10 total) is simpler than a window-function workaround
         # and trivial at this scale (hourly cache rebuild).
-        demo_window_start = timezone.now() - timedelta(days=14)
-        demo_weekdays = [5, 6, 7]  # ISO weekday: Fri=5, Sat=6, Sun=7
         streams_by_profile = {
             profile_id: list(
-                Stream.objects.annotate(started_dow=ExtractIsoWeekDay("started_at"))
+                Stream.objects.annotate(finished_dow=ExtractIsoWeekDay("finished_at"))
                 .filter(
                     streamer_profile_id=profile_id,
                     status=Stream.Status.APPROVED,
                     finished_at__gte=demo_window_start,
-                    started_dow__in=demo_weekdays,
+                    finished_dow__in=demo_weekdays,
+                    genre_ids__overlap=demo_genre_ids,
                 )
                 .order_by("-finished_at")
             )
@@ -170,9 +183,8 @@ class Command(BaseCommand):
             search_results.append({
                 "display_name": profile.host_display_name,
                 "login": profile.host_login,
-                "twitch_url": f"https://twitch.tv/{profile.host_login}",
-                "tracked_streams": row["tracked_streams"],
-                "peak_viewers": row["peak_viewers"],
+                "tracked_streams": f"{row["tracked_streams"]:,}",
+                "peak_viewers": f"{row["peak_viewers"]:,}",
                 "languages": sorted(lang.upper() for lang in row["languages"] if lang),
                 "streams": streams_payload,
             })
@@ -252,11 +264,14 @@ class Command(BaseCommand):
                         {"v": "sat", "l": "Sat"},
                         {"v": "sun", "l": "Sun"},
                     ],
-                    multi_default=["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                    multi_default=["mon", "fri", "sat", "sun"],
                 ),
             ],
             "button_text": "Search",
             "demo_title": f"Note:",
+            "search_notes": [
+                "Times are UTC. Day-of-week and the days window both key off when each stream went offline; UTC days can straddle two local days in non-UTC zones."
+            ],
             "demo_note": f"The search form is a demo example of the real search form which currently is under active development."
                 f" The results below fit the the real search results for the search parameters prefilled in the form.",
         }
