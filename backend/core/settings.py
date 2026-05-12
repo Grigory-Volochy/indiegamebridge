@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import environ
 import os
+import sys
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -140,6 +141,37 @@ STATIC_URL = "static/"
 LOG_DIR = Path(env.str("LOG_DIR", default=str(BASE_DIR / "logs")))
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+# On Windows, TimedRotatingFileHandler holds an exclusive write handle on the
+# log file - which blocks `manage.py test` (and prevents deleting the file)
+# whenever any other Python process has already opened it (e.g. a runserver in
+# another terminal or an IDE worker). Drop file handlers under the test runner;
+# console output still surfaces log messages in the test output.
+_RUNNING_TESTS = "test" in sys.argv
+
+_log_handlers = {
+    "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "verbose",
+    },
+}
+if not _RUNNING_TESTS:
+    _log_handlers["fetch_file"] = {
+        "class": "logging.handlers.TimedRotatingFileHandler",
+        "filename": str(LOG_DIR / "fetch.log"),
+        "when": "midnight",
+        "backupCount": 14,
+        "encoding": "utf-8",
+        "formatter": "verbose",
+    }
+    _log_handlers["pages_file"] = {
+        "class": "logging.handlers.TimedRotatingFileHandler",
+        "filename": str(LOG_DIR / "pages.log"),
+        "when": "midnight",
+        "backupCount": 14,
+        "encoding": "utf-8",
+        "formatter": "verbose",
+    }
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -149,23 +181,15 @@ LOGGING = {
             "style": "{",
         },
     },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "verbose",
-        },
-        "fetch_file": {
-            "class": "logging.handlers.TimedRotatingFileHandler",
-            "filename": str(LOG_DIR / "fetch.log"),
-            "when": "midnight",
-            "backupCount": 14,
-            "encoding": "utf-8",
-            "formatter": "verbose",
-        },
-    },
+    "handlers": _log_handlers,
     "loggers": {
         "apps.fetch": {
-            "handlers": ["console", "fetch_file"],
+            "handlers": ["console"] if _RUNNING_TESTS else ["console", "fetch_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps.pages": {
+            "handlers": ["console"] if _RUNNING_TESTS else ["console", "pages_file"],
             "level": "INFO",
             "propagate": False,
         },

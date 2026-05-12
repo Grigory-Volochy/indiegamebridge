@@ -68,6 +68,16 @@ class Stream(models.Model):
             " Populated when the stream goes offline; supports fast lookup by game."
     )
 
+    genre_ids = ArrayField(
+        models.BigIntegerField(),
+        blank=True,
+        default=list,
+        help_text="Distinct GameGenre.host_genre_id values across this stream's games."
+            " Denormalized from host_game_ids -> Game.genres so genre-filtered search"
+            " can hit a small RHS array instead of resolving genres -> games -> overlap."
+            " Refreshed when IGDB enrichment adds genre links (see enrich_igdb_games)."
+    )
+
     duration = models.PositiveIntegerField(
         default=0,
         help_text="Stream length in seconds, derived from finished_at - started_at."
@@ -80,6 +90,7 @@ class Stream(models.Model):
         ]
         indexes = [
             GinIndex(fields=["host_game_ids"], name="stream_host_game_ids_gin"),
+            GinIndex(fields=["genre_ids"], name="stream_genre_ids_gin"),
             # Targets _finalize_offline_streams: filter(status=LIVE, finished_at__lt=...).
             # LIVE is a tiny fraction of total rows, so the partial index stays small
             # and the planner can walk it directly instead of seq-scanning the table.

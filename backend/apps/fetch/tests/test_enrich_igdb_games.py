@@ -14,12 +14,14 @@ Covers:
 - --limit caps how many games are processed in a run.
 """
 
+from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest import mock
 
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
 
-from apps.streams.models import Game, GameGenre
+from apps.streams.models import Game, GameGenre, Stream, StreamerProfile
 
 
 def _patch_igdb_client(get_games_by_ids_response=None, get_genres_response=None):
@@ -270,6 +272,66 @@ class EnrichIgdbGamesTests(TestCase):
         called_ids = instance.get_games_by_ids.call_args.args[0]
         self.assertEqual(len(called_ids), 3)
         self.assertEqual(Game.objects.exclude(host_name="").count(), 3)
+
+    def test_enrichment_refreshes_genre_ids_only_for_approved_streams_referencing_enriched_games(self):
+        """When enrich_igdb_games links genres to a Game, the denormalized
+        Stream.genre_ids must be recomputed - but only for APPROVED streams
+        whose host_game_ids actually reference one of the just-enriched games.
+        Streams in other statuses or with no host_game_ids overlap must stay
+        untouched.
+        """
+        profile = StreamerProfile.objects.create(
+            host=StreamerProfile.Host.TWITCH,
+            host_user_id=2001,
+            host_login="x",
+            host_display_name="X",
+        )
+
+        def make_stream(host_stream_id, status, host_game_ids):
+            return Stream.objects.create(
+                streamer_profile=profile,
+                host_stream_id=host_stream_id,
+                status=status,
+                language="en",
+                started_at=datetime(2025, 1, 1, tzinfo=dt_timezone.utc),
+                finished_at=timezone.now() - timedelta(days=1),
+                host_game_ids=host_game_ids,
+            )
+
+        _make_genre(host_genre_id=31, name="Adventure", slug="adv")
+        _make_genre(host_genre_id=32, name="Indie", slug="indie")
+        # An extra genre that's NOT in the IGDB response - must not leak into
+        # genre_ids for any stream.
+        _make_genre(host_genre_id=99, name="Other", slug="other")
+
+        _make_isgame(host_game_id=100, igdb_game_id=12345)
+
+        approved_match = make_stream(1, Stream.Status.APPROVED, [100])
+        offline_match = make_stream(2, Stream.Status.OFFLINE, [100])  # wrong status
+        approved_no_overlap = make_stream(3, Stream.Status.APPROVED, [999])  # no overlap
+
+        response = [{
+            "id": 12345,
+            "name": "G",
+            "summary": "",
+            "url": "",
+            # IGDB order is intentionally reversed - the stored array must come
+            # out sorted by host_genre_id thanks to ORDER BY in array_agg.
+            "genres": [32, 31],
+        }]
+        patcher, _ = _patch_igdb_client(get_games_by_ids_response=response)
+        try:
+            call_command("enrich_igdb_games", stdout=mock.Mock())
+        finally:
+            patcher.stop()
+
+        approved_match.refresh_from_db()
+        offline_match.refresh_from_db()
+        approved_no_overlap.refresh_from_db()
+
+        self.assertEqual(approved_match.genre_ids, [31, 32])
+        self.assertEqual(offline_match.genre_ids, [])
+        self.assertEqual(approved_no_overlap.genre_ids, [])
 
     def test_field_truncation_protects_against_oversized_igdb_strings(self):
         """name/url get clipped to model max_lengths to avoid raising on the
