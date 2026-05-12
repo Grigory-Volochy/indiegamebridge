@@ -1,8 +1,11 @@
 import logging
+from datetime import timedelta
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand
 from django.db.models import Count, Max
+from django.db.models.functions import ExtractIsoWeekDay
+from django.utils import timezone
 
 from apps.streams.models import Game, GameGenre, Stream, StreamerProfile
 from apps.pages.models import CachedPage
@@ -103,15 +106,23 @@ class Command(BaseCommand):
             )
         }
 
-        # Attach the 20 most recent APPROVED streams per top streamer. One small
+        # Attach each top streamer's APPROVED streams from the last 14 days that
+        # were broadcast on Fri/Sat/Sun (by started_at). Both filters are hardcoded
+        # for the demo; the real search will expose them in the form. One small
         # query per streamer (10 total) is simpler than a window-function workaround
         # and trivial at this scale (hourly cache rebuild).
+        demo_window_start = timezone.now() - timedelta(days=14)
+        demo_weekdays = [5, 6, 7]  # ISO weekday: Fri=5, Sat=6, Sun=7
         streams_by_profile = {
             profile_id: list(
-                Stream.objects.filter(
+                Stream.objects.annotate(started_dow=ExtractIsoWeekDay("started_at"))
+                .filter(
                     streamer_profile_id=profile_id,
                     status=Stream.Status.APPROVED,
-                ).order_by("-finished_at")[:20]
+                    finished_at__gte=demo_window_start,
+                    started_dow__in=demo_weekdays,
+                )
+                .order_by("-finished_at")
             )
             for profile_id in profile_ids
         }
@@ -292,6 +303,12 @@ class Command(BaseCommand):
                     #       streamers can deliberately leave a message and contact information - probably, it will require manual moderation or via AI (or both)?
                     #   'Public developer profile' - if some developers want to use the platform as an additional advertisement channel for
                     #       their game(s) - probably, it will require manual moderation or via AI (or both)?
+                    #   Features for make the communication easier for both sides (the idea is to provide dedicated place for communication and not to force anyone to use the platform for this if they prefer another communication channels):
+                    #       - direct messages
+                    #       - built-in Zoom calls and meetings or similar
+                    #       - ratings and statistics
+                    #       - integrated promocodes (to make collaboration more automated and reduce overhead costs for both sides)
+                    #       - AI best matching search (as a quick start option for those, who don't like spend time for thorough search pr want to reduce overhead costs)
                 ]
             },
             "methodology": {
