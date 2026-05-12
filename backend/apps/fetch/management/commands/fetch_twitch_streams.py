@@ -221,6 +221,7 @@ class Command(BaseCommand):
 
         For each stale stream, derives:
         - `max_viewers` = max viewer value observed across all snapshots (`max(s["v"] ...)`)
+        - `duration`    = stream length in seconds (`finished_at - started_at`)
         - `host_game_ids`    = sorted distinct game ids observed (`sorted({s["g"] ...})`)
         Then bulk-updates status=OFFLINE plus those summary fields. Streams with
         `len(snapshots) <= 1` or `max_viewers < 3` carry too little signal and are dropped
@@ -238,7 +239,7 @@ class Command(BaseCommand):
             Stream.objects.filter(
                 status=Stream.Status.LIVE,
                 finished_at__lt=stale_stream_threshold,
-            ).only("id", "snapshots")
+            ).only("id", "snapshots", "started_at", "finished_at")
         )
 
         if not stale_streams:
@@ -257,6 +258,7 @@ class Command(BaseCommand):
                 continue
             stream.status = Stream.Status.OFFLINE
             stream.max_viewers = max_viewers
+            stream.duration = max(int((stream.finished_at - stream.started_at).total_seconds()), 0)
             stream.host_game_ids = sorted({s["g"] for s in snaps})
             streams_to_update.append(stream)
 
@@ -267,7 +269,7 @@ class Command(BaseCommand):
             if streams_to_update:
                 Stream.objects.bulk_update(
                     streams_to_update,
-                    ["status", "max_viewers", "host_game_ids"],
+                    ["status", "max_viewers", "duration", "host_game_ids"],
                     batch_size=500,
                 )
 
