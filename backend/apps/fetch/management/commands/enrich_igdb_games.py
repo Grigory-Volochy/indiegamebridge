@@ -1,7 +1,7 @@
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import connection, transaction
 
 from core.utils.igdb_api_client import IgdbApiClient
 from apps.streams.models import Game, GameGenre
@@ -119,6 +119,47 @@ class Command(BaseCommand):
                     batch_size=1000,
                     ignore_conflicts=True,
                 )
+                # The just-linked genres are now reachable from any approved Stream
+                # whose host_game_ids reference one of these games. Recompute the
+                # denormalized Stream.genre_ids for that affected slice so the home
+                # page (and future search) can filter by genre_ids directly.
+                self._refresh_stream_genre_ids(
+                    [g.host_game_id for g in games_to_update]
+                )
+
+    @staticmethod
+    def _refresh_stream_genre_ids(enriched_host_game_ids):
+        """Recomputes Stream.genre_ids for approved streams whose host_game_ids
+        overlap the just-enriched games.
+
+        Expressed as a single UPDATE ... FROM (SELECT ... GROUP BY) so Postgres
+        does the per-stream aggregation server-side. The WHERE clause uses the
+        GIN index on host_game_ids to narrow the row set before joining through
+        the Game / GameGenre tables.
+        """
+        if not enriched_host_game_ids:
+            return
+        with connection.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE streams_stream s
+                SET genre_ids = sub.ids
+                FROM (
+                    SELECT s2.id AS stream_id,
+                           array_agg(DISTINCT gg.host_genre_id ORDER BY gg.host_genre_id) AS ids
+                    FROM streams_stream s2
+                    JOIN streams_game g ON g.host_game_id = ANY(s2.host_game_ids)
+                    JOIN streams_game_genres link ON link.game_id = g.id
+                    JOIN streams_gamegenre gg ON gg.id = link.gamegenre_id
+                    WHERE s2.status = 'approved'
+                      AND s2.host_game_ids && %s::bigint[]
+                    GROUP BY s2.id
+                ) sub
+                WHERE s.id = sub.stream_id
+                  AND s.genre_ids IS DISTINCT FROM sub.ids;
+                """,
+                [list(enriched_host_game_ids)],
+            )
 
     def _refresh_genres(self, client, genres_by_host_id):
         """Pulls the full genre list from IGDB and inserts any new rows.
