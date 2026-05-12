@@ -68,6 +68,12 @@ class Stream(models.Model):
             " Populated when the stream goes offline; supports fast lookup by game."
     )
 
+    duration = models.PositiveIntegerField(
+        default=0,
+        help_text="Stream length in seconds, derived from finished_at - started_at."
+            " Populated when the stream goes offline; live streams stay at 0."
+    )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["streamer_profile", "host_stream_id"], name="unique_host_stream"),
@@ -82,6 +88,7 @@ class Stream(models.Model):
                 name="stream_live_finished_at_idx",
                 condition=models.Q(status="live"),
             ),
+            models.Index(fields=["duration"], name="stream_duration_idx"),
         ]
 
     def __str__(self):
