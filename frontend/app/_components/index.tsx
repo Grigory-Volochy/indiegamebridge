@@ -1,2 +1,2 @@
-export * from "./SearchStreamersForm";
-export * from "./SearchResultsList";
+export * from "./SearchStreamerForm";
+export * from "./SearchStreamerResultsList";

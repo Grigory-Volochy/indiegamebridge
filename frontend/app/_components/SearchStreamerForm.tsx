@@ -2,34 +2,34 @@
 
 import { Fragment, useState } from "react";
 
-export type FieldSet = {
+export type FieldData = {
     v: string;
     l: string;
 };
 
-export type SearchFilterField = {
+export type SearchStreamerFilterData = {
     filter_type: string;
     filter_name: string;
     filter_label: string;
-    multi_values: FieldSet[];
+    multi_values: FieldData[];
     multi_default: string[];
     single_default: string;
-    min_values: FieldSet[];
+    min_values: FieldData[];
     min_default: string;
-    max_values: FieldSet[];
+    max_values: FieldData[];
     max_default: string;
 };
 
-export type SearchForm = {
+export type SearchFormData = {
     title: string;
     aria_label: string;
-    filters: SearchFilterField[];
+    filters: SearchStreamerFilterData[];
     button_text: string;
     demo_title: string;
     demo_note: string;
 };
 
-export function SearchStreamersForm({ search_form }: { search_form: SearchForm }) {
+export function SearchStreamerForm({ search_form }: { search_form: SearchFormData }) {
     const [formData, setFormData] = useState<Record<string, any>>(() => {
         const initial: Record<string, any> = {};
         for (const one_filter of search_form.filters) {
@@ -79,12 +79,15 @@ export function SearchStreamersForm({ search_form }: { search_form: SearchForm }
                 {search_form.filters.map((one_filter) => (
                     <fieldset key={one_filter.filter_name}
                             className={`flex items-center flex-wrap col-span-1 ${
-                                one_filter.multi_values.length > 10
-                                    ? 'lg:col-span-3 md:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1'
-                                    : (one_filter.multi_values.length > 3
-                                        ? 'lg:col-span-2 md:col-span-2'
-                                        : ''
-                                    )
+                                one_filter.filter_type === 'multiselect'
+                                    ? one_filter.multi_values.length > 10
+                                        ? 'lg:col-span-3 md:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1'
+                                        : (one_filter.multi_values.length > 3
+                                            ? 'lg:col-span-2 md:col-span-2'
+                                            : ''
+                                        )
+                                    
+                                    : ''
                                 }`}>
                         <legend className="mr-4 text-sm italic text-brand-blue">{one_filter.filter_label}</legend>
                         {(() => {
@@ -169,9 +172,9 @@ export function SearchStreamersForm({ search_form }: { search_form: SearchForm }
                         })()}
                     </fieldset>
                 ))}
-                <fieldset className="flex items-center">
+                <fieldset className="flex justify-center col-span-1 lg:col-span-3 md:col-span-2 mt-6">
                     <button type="submit" disabled={true}
-                        className="bg-gray-300 px-8 py-3 mx-auto rounded-sm text-white hover:bg-gray-300 cursor-not-allowed shadow-sm shadow-gray-200 min-w-40"
+                        className="bg-gray-300 px-8 py-3 rounded-sm text-white hover:bg-gray-300 cursor-not-allowed shadow-sm shadow-gray-200 min-w-40"
                     >{search_form.button_text}</button>
                 </fieldset>
                 <div className="lg:col-span-3 md:col-span-2 grid grid-cols-1 text-orange-600 mt-4 border-t border-orange-500 pt-4">

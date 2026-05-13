@@ -1,10 +1,11 @@
 import logging
 from datetime import timedelta
+import json
 
-from django.contrib.postgres.aggregates import ArrayAgg
+from django.contrib.postgres.aggregates import ArrayAgg, JSONBAgg
 from django.core.management.base import BaseCommand
-from django.db.models import Count, Max
-from django.db.models.functions import ExtractIsoWeekDay
+from django.db.models import Count, Max, Avg, Min, F
+from django.db.models.functions import ExtractIsoWeekDay, JSONObject
 from django.utils import timezone
 
 from apps.streams.models import Game, GameGenre, Stream, StreamerProfile
@@ -59,144 +60,128 @@ class Command(BaseCommand):
 
     def _get_time_filter_values(self):
         return [
-            {"v": "20m", "l": "20 minutes"},
-            {"v": "1h", "l": "1 Hour"},
-            {"v": "2h", "l": "2 Hours"},
-            {"v": "3h", "l": "3 Hours"},
-            {"v": "6h", "l": "6 Hours"},
-            {"v": "9h", "l": "9 Hours"},
-            {"v": "12h", "l": "12 Hours"},
-            {"v": "24h", "l": "24 Hours"}
+            {"v": "20m", "l": "20 min"},
+            {"v": "1h", "l": "1 h"},
+            {"v": "2h", "l": "2 h"},
+            {"v": "3h", "l": "3 h"},
+            {"v": "6h", "l": "6 h"},
+            {"v": "9h", "l": "9 h"},
+            {"v": "12h", "l": "12 h"},
+            {"v": "24h", "l": "24 h"}
         ]
     
-    def _get_demo_search_results(self):
-        # Demo display filters - hardcoded here, will be exposed via the search
-        # form in the real search. Applied both to qualifier (which streamers
-        # appear in the top 10) and to attached streams (which streams render
-        # under each streamer), so the two stay in sync - no streamer can rank
-        # in the top 10 with zero matching streams to show.
-        # Aggregates still run over every APPROVED stream so totals reflect the
-        # streamer's full footprint, not the filtered slice.
-        # Future ExcludedStreamers integration: add `.exclude(streamer_profile_id__in=excluded_ids)`
-        # to the top_aggregates queryset before the slice.
+    def _format_duration(self, duration=0):
+        hours, r = divmod(duration, 3600)
+        minutes, r = divmod(r, 60)
+        return f"{hours} h | " + f"{minutes} min"
+
+    def _get_demo_search_results(self) -> tuple[list[dict]]:
+        # Hardcoded search filter values for demo purpose - will be exposed via the search form in the real search.
+        demo_language = "en"
         demo_window_start = timezone.now() - timedelta(days=7)
-        demo_weekdays = [1, 5, 6, 7]  # ISO weekday: Mon=1, Fri=5, Sat=6, Sun=7
-        demo_genre_ids = [4, 5, 12, 32, 24]  # GameGenre.host_genre_id values
+        demo_weekdays = [1, 2, 3, 4, 5, 6, 7]
+        demo_min_duration = 1800
+        demo_max_duration = 36000
+        demo_min_viewers = 100
+        demo_max_viewers = 100000
+        demo_genre_ids = [5]  # GameGenre.host_genre_id values
 
-        # Genre match goes directly against the denormalized Stream.genre_ids
-        # (populated by enrich_igdb_games + the one-shot backfill_stream_genre_ids
-        # command). The GIN index on genre_ids handles the overlap; the RHS stays
-        # tiny regardless of how many games map to those genres.
-        qualifying_streamer_ids = (
-            Stream.objects.annotate(finished_dow=ExtractIsoWeekDay("finished_at"))
-            .filter(
-                status=Stream.Status.APPROVED,
-                language="en",
-                finished_at__gte=demo_window_start,
-                finished_dow__in=demo_weekdays,
-                genre_ids__overlap=demo_genre_ids,
-            )
-            .values_list("streamer_profile_id", flat=True)
-            .distinct()
-        )
-
-        top_aggregates = list(
+        # Select top streamers with streams depending on the filtered streams list.
+        top_streamer_aggregates = list(
             Stream.objects.filter(
                 status=Stream.Status.APPROVED,
-                streamer_profile_id__in=qualifying_streamer_ids,
+                finished_at__gte=demo_window_start,
+                language=demo_language,
+                duration__gte=demo_min_duration,
+                duration__lte=demo_max_duration,
+                max_viewers__gte=demo_min_viewers,
+                max_viewers__lte=demo_max_viewers,
+                genre_ids__overlap=demo_genre_ids
             )
-            .values("streamer_profile_id")
+            .annotate(
+                finished_dow=ExtractIsoWeekDay("finished_at")
+            )
+            .filter(
+                finished_dow__in=demo_weekdays
+            )
+            .annotate(
+                host_login=F("streamer_profile__host_login"),
+                host_display_name=F("streamer_profile__host_display_name")
+            )
+            .values(
+                loging=F("host_login"),
+                display_name=F("host_display_name"),
+                profile_id=F("streamer_profile_id")
+            )
             .annotate(
                 tracked_streams=Count("id"),
                 peak_viewers=Max("max_viewers"),
+                max_duration=Max("duration"),
+                avg_duration=Avg("duration"),
+                min_duration=Min("duration"),
                 languages=ArrayAgg("language", distinct=True),
+                streams=JSONBAgg(
+                    JSONObject(
+                        id="id",
+                        duration="duration",
+                        max_viewers="max_viewers",
+                        language="language",
+                        game_ids="host_game_ids"
+                    )
+                )
             )
             .order_by("-peak_viewers", "-tracked_streams")[: self.home_top_n]
         )
 
-        profile_ids = [row["streamer_profile_id"] for row in top_aggregates]
-        profiles_by_id = {
-            profile.id: profile
-            for profile in StreamerProfile.objects.filter(id__in=profile_ids).only(
-                "id", "host_login", "host_display_name"
-            )
-        }
-
-        # Attach each qualifying streamer's matching APPROVED streams. One small
-        # query per streamer (10 total) is simpler than a window-function workaround
-        # and trivial at this scale (hourly cache rebuild).
-        streams_by_profile = {
-            profile_id: list(
-                Stream.objects.annotate(finished_dow=ExtractIsoWeekDay("finished_at"))
-                .filter(
-                    streamer_profile_id=profile_id,
-                    status=Stream.Status.APPROVED,
-                    finished_at__gte=demo_window_start,
-                    finished_dow__in=demo_weekdays,
-                    genre_ids__overlap=demo_genre_ids,
-                )
-                .order_by("-finished_at")
-            )
-            for profile_id in profile_ids
-        }
-
         # Resolve every referenced game in a single query.
         all_game_ids = {
-            gid
-            for streams in streams_by_profile.values()
-            for stream in streams
-            for gid in (stream.host_game_ids or [])
-        }
-        games_by_host_id = {
-            game.host_game_id: game
-            for game in Game.objects.filter(host_game_id__in=all_game_ids).only(
-                "host_game_id", "host_name",
-            )
+            one_game_id
+            for one_streamer in top_streamer_aggregates
+            for one_stream in one_streamer.get("streams", [])
+            for one_game_id in one_stream.get("game_ids", [])
         }
 
-        search_results = []
-        for row in top_aggregates:
-            profile = profiles_by_id.get(row["streamer_profile_id"])
-            if profile is None:
-                continue
+        game_names_map = dict(
+            Game.objects.filter(host_game_id__in=all_game_ids)
+            .values_list("host_game_id", "host_name")
+        )
 
-            streams_payload = []
-            for stream in streams_by_profile.get(profile.id, []):
-                games_payload = []
-                for gid in (stream.host_game_ids or []):
-                    game = games_by_host_id.get(gid)
-                    if game is None:
-                        continue
-                    games_payload.append({
-                        "host_game_id": game.host_game_id,
-                        "host_name": game.host_name,
-                    })
-                streams_payload.append({
-                    "host_stream_id": stream.host_stream_id,
-                    "language": stream.language,
-                    "max_viewers": stream.max_viewers,
-                    "started_at": stream.started_at.isoformat(),
-                    "finished_at": stream.finished_at.isoformat(),
-                    "games": games_payload,
-                })
+        # replace
+        for one_streamer in top_streamer_aggregates:
+            for stream in one_streamer.get("streams", []):
+                stream["games"] = [
+                    game_names_map.get(game_id, "N/A")
+                    for game_id in (stream.get("game_ids") or [])
+                ]
+                stream["duration"] = self._format_duration(duration=stream["duration"])
+                stream.pop("game_ids", None)
 
-            search_results.append({
-                "display_name": profile.host_display_name,
-                "login": profile.host_login,
-                "tracked_streams": f"{row["tracked_streams"]:,}",
-                "peak_viewers": f"{row["peak_viewers"]:,}",
-                "languages": sorted(lang.upper() for lang in row["languages"] if lang),
-                "streams": streams_payload,
-            })
-
-        return search_results
+        return top_streamer_aggregates 
 
     def _get_search_form(self):
-        game_genres = GameGenre.objects.values_list("host_genre_id", "host_name")
+        game_genres = [("any", "Any genre")] + list(GameGenre.objects.values_list("host_genre_id", "host_name"))
         return {
             "title": "Search Streamers",
             "aria_label": "Demonstration search form",
             "filters": [
+                self._get_search_form_field(
+                    filter_type="range",
+                    filter_name="max_viewers",
+                    filter_label="Max Viewers",
+                    min_values=[{"v": "min", "l": "min"}] + self._get_quant_filter_values(),
+                    min_default="min",
+                    max_values=[{"v": "max", "l": "max"}] + self._get_quant_filter_values(),
+                    max_default="max",
+                ),
+                self._get_search_form_field(
+                    filter_type="range",
+                    filter_name="avg_viewers",
+                    filter_label="Avg Viewers",
+                    min_values=[{"v": "min", "l": "min"}] + self._get_quant_filter_values(),
+                    min_default="min",
+                    max_values=[{"v": "max", "l": "max"}] + self._get_quant_filter_values(),
+                    max_default="max",
+                ),
                 self._get_search_form_field(
                     filter_type="dropdown",
                     filter_name="language",
@@ -210,67 +195,52 @@ class Command(BaseCommand):
                 ),
                 self._get_search_form_field(
                     filter_type="range",
-                    filter_name="avg_viewers",
-                    filter_label="Avg Viewers",
-                    min_values=[{"v": "min", "l": "min"}] + self._get_quant_filter_values(),
-                    min_default="min",
-                    max_values=[{"v": "max", "l": "max"}] + self._get_quant_filter_values(),
-                    max_default="max",
-                ),
-                self._get_search_form_field(
-                    filter_type="range",
-                    filter_name="max_viewers",
-                    filter_label="Max Viewers",
-                    min_values=[{"v": "min", "l": "min"}] + self._get_quant_filter_values(),
-                    min_default="min",
-                    max_values=[{"v": "max", "l": "max"}] + self._get_quant_filter_values(),
-                    max_default="max",
-                ),
-                self._get_search_form_field(
-                    filter_type="range",
-                    filter_name="avg_duration",
-                    filter_label="Avg Duration",
+                    filter_name="duration",
+                    filter_label="Duration",
                     min_values=[{"v": "min", "l": "min"}] + self._get_time_filter_values(),
                     min_default="min",
                     max_values=[{"v": "max", "l": "max"}] + self._get_time_filter_values(),
                     max_default="max",
                 ),
                 self._get_search_form_field(
-                    filter_type="range",
-                    filter_name="max_duration",
-                    filter_label="Max Duration",
-                    min_values=[{"v": "min", "l": "min"}] + self._get_time_filter_values(),
-                    min_default="min",
-                    max_values=[{"v": "max", "l": "max"}] + self._get_time_filter_values(),
-                    max_default="max",
+                    filter_type="dropdown",
+                    filter_name="time_window",
+                    filter_label="Time Window",
+                    multi_values=[
+                        {"v": "7", "l": "1 Week"},
+                        {"v": "14", "l": "2 Weeks"},
+                        {"v": "21", "l": "3 Weeks"},
+                        {"v": "28", "l": "4 Weeks"},
+                    ],
+                    multi_default=["7"],
                 ),
                 self._get_search_form_field(
-                    filter_type="multiselect",
-                    filter_name="genres",
-                    filter_label="Game Genres",
+                    filter_type="dropdown",
+                    filter_name="genre",
+                    filter_label="Game Genre",
                     multi_values=[{"v": str(one_value), "l": one_label} for one_value, one_label in game_genres],
-                    multi_default=["4", "5", "12", "32", "24"],
+                    multi_default=["any"],
                 ),
                 self._get_search_form_field(
                     filter_type="multiselect",
                     filter_name="week_days",
                     filter_label="Days of Week",
                     multi_values=[
-                        {"v": "mon", "l": "Mon"},
-                        {"v": "tue", "l": "Tue"},
-                        {"v": "wed", "l": "Wed"},
-                        {"v": "thu", "l": "Thu"},
-                        {"v": "fri", "l": "Fri"},
-                        {"v": "sat", "l": "Sat"},
-                        {"v": "sun", "l": "Sun"},
+                        {"v": "1", "l": "Mon"},
+                        {"v": "2", "l": "Tue"},
+                        {"v": "3", "l": "Wed"},
+                        {"v": "4", "l": "Thu"},
+                        {"v": "5", "l": "Fri"},
+                        {"v": "6", "l": "Sat"},
+                        {"v": "7", "l": "Sun"},
                     ],
-                    multi_default=["mon", "fri", "sat", "sun"],
+                    multi_default=["1", "5", "6", "7"],
                 ),
             ],
             "button_text": "Search",
             "demo_title": f"Note:",
             "search_notes": [
-                "Times are UTC. Day-of-week and the days window both key off when each stream went offline; UTC days can straddle two local days in non-UTC zones."
+                "* Times are UTC. Day-of-week and the days window both key off when each stream went offline; UTC days can straddle two local days in non-UTC zones."
             ],
             "demo_note": f"The search form is a demo example of the real search form which currently is under active development."
                 f" The results below fit the the real search results for the search parameters prefilled in the form.",

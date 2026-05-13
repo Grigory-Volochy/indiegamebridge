@@ -1,5 +1,5 @@
 import { Fragment } from "react/jsx-runtime";
-import { SearchStreamersForm, SearchForm, SearchResult, SearchResultsList } from "./_components";
+import { SearchStreamerForm, SearchStreamerResultsList, SearchFormData, StreamerData } from "./_components";
 
 type Section = {
     title: string;
@@ -23,8 +23,8 @@ type HomePageContent = {
     description: string;
     info: string;
     project_goal: Section;
-    search_form: SearchForm;
-    search_results: SearchResult[];
+    search_form: SearchFormData;
+    search_results: StreamerData[];
     methodology: Section;
     roadmap: FeaturedSection;
     data_source: string;
@@ -56,7 +56,7 @@ export default async function Home() {
             <main className="w-full">
 
                 {/* Project Goal */}
-                <section>
+                <section className="px-6">
                     <div className="max-w-[1000] mx-auto pt-16 pb-8">
                         <h2 className="text-2xl font-bold mb-4">{content.project_goal.title}</h2>
                         <p>{content.project_goal.description}</p>
@@ -64,35 +64,35 @@ export default async function Home() {
                 </section>
 
                 {/* Demo Search */}
-                <section>
+                <section className="px-6">
                     <div className="max-w-[1000] mx-auto pt-4 pb-16">
-                        <SearchStreamersForm search_form={content.search_form}></SearchStreamersForm>
+                        <SearchStreamerForm search_form={content.search_form}></SearchStreamerForm>
                         <div className="my-8 p-6 border border-orange-500 rounded-sm bg-white shadow-sm shadow-gray-200">
                             <h2 className="text-xl mb-4">{content.cta.title}</h2>
                             <form>
-                                <fieldset>
-                                <input type="email" id="top_cta_email" name="email" required={true}
-                                    className="bg-white px-4 py-3 rounded-sm text-black min-w-80 border border-gray-200 focus-visible:outline-gray-400"
-                                    placeholder={content.cta.input_placeholder}
-                                    defaultValue="" />
-                                <button type="submit"
-                                    className="bg-orange-500 px-8 py-3 ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200 min-w-40"
-                                >{content.cta.btn_text}</button>
+                                <fieldset className="flex flex-row justify-center flex-wrap">
+                                    <input type="email" id="top_cta_email" autoComplete="off" name="email" required={true}
+                                        className="bg-white px-4 py-3 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 border border-gray-200 focus-visible:outline-gray-400"
+                                        placeholder={content.cta.input_placeholder}
+                                        defaultValue="" />
+                                    <button type="submit"
+                                        className="bg-orange-500 px-8 py-3 mx-auto md:ml-3 lg:ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200 min-w-40 mt-6 md:mt-0 lg:mt-0"
+                                    >{content.cta.btn_text}</button>
                                 </fieldset>
                             </form>
                         </div>
-                        <SearchResultsList search_results={content.search_results}></SearchResultsList>
+                        <SearchStreamerResultsList search_results={content.search_results}></SearchStreamerResultsList>
                     </div>
                 </section>
 
                 {/* Methodology */}
-                <section className="w-full">
+                <section className="w-full px-6">
                     <div className="max-w-[1000] mx-auto py-8">
                         <h2>{content.methodology.title}</h2>
                         <p>{content.methodology.description}</p>
                     </div>
                 </section>
-                <section className="border-t border-gray-200 shadow-sm shadow-gray-200">
+                <section className="border-t border-gray-200 shadow-sm shadow-gray-200 px-6">
                     <div className="max-w-[1000] mx-auto py-16">
                         <h2 className="text-2xl font-bold mb-4">{content.roadmap.title}</h2>
                         <p>{content.roadmap.description}</p>
@@ -110,11 +110,13 @@ export default async function Home() {
                 <section className="max-w-[1000] mx-auto">
                     <h2 className="mb-5 text-xl">{content.cta.title}</h2>
                     <form className="mb-32">
-                        <fieldset>
-                            <input type="email"
-                                className="bg-white px-4 py-3 rounded-sm text-black min-w-80 focus-visible:outline-gray-400" placeholder={content.cta.input_placeholder} defaultValue="" />
+                        <fieldset className="flex flex-row justify-center flex-wrap">
+                            <input type="email" id="footer_cta_email" autoComplete="off" name="email" required={true}
+                                className="bg-white px-4 py-3 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 focus-visible:outline-gray-400"
+                                placeholder={content.cta.input_placeholder}
+                                defaultValue="" />
                             <button type="submit"
-                                className="bg-orange-500 px-8 py-3 ml-3 rounded-sm hover:bg-orange-600 cursor-pointer min-w-40"
+                                className="bg-orange-500 px-8 py-3 mx-auto md:ml-3 lg:ml-3 rounded-sm hover:bg-orange-600 cursor-pointer min-w-40 mt-6 md:mt-0 lg:mt-0"
                             >{content.cta.btn_text}</button>
                         </fieldset>
                     </form>
