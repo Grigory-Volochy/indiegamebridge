@@ -27,6 +27,7 @@ export type SearchFormData = {
     button_text: string;
     demo_title: string;
     demo_note: string;
+    search_notes: string[];
 };
 
 export function SearchStreamerForm({ search_form }: { search_form: SearchFormData }) {
@@ -89,7 +90,7 @@ export function SearchStreamerForm({ search_form }: { search_form: SearchFormDat
                                     
                                     : ''
                                 }`}>
-                        <legend className="mr-4 text-sm italic text-brand-blue">{one_filter.filter_label}</legend>
+                        <legend className="mr-4 text-sm text-brand-blue">{one_filter.filter_label}</legend>
                         {(() => {
                             switch (one_filter.filter_type) {
 
@@ -172,11 +173,21 @@ export function SearchStreamerForm({ search_form }: { search_form: SearchFormDat
                         })()}
                     </fieldset>
                 ))}
-                <fieldset className="flex justify-center col-span-1 lg:col-span-3 md:col-span-2 mt-6">
-                    <button type="submit" disabled={true}
-                        className="bg-gray-300 px-8 py-3 rounded-sm text-white hover:bg-gray-300 cursor-not-allowed shadow-sm shadow-gray-200 min-w-40"
-                    >{search_form.button_text}</button>
-                </fieldset>
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+                    <div className="col-span-1 md:col-span-1 lg:col-span-2 text-sm italic">
+                        {search_form.search_notes.map((one_note, index) => (
+                            <div key={`note-${index}`}
+                                className="before:content-(--note-marker) ml-4 before:absolute before:-left-4 relative"
+                                style={{ ["--note-marker" as any]: `"${"*".repeat(index + 1)}"` }}
+                            >{one_note}</div>
+                        ))}
+                    </div>
+                    <fieldset className="flex justify-center col-span-1 items-start">
+                        <button type="submit" disabled={true}
+                            className="bg-gray-300 px-8 py-2 rounded-sm text-white hover:bg-gray-300 cursor-not-allowed shadow-sm shadow-gray-200 min-w-40"
+                        >{search_form.button_text}</button>
+                    </fieldset>
+                </div>
                 <div className="lg:col-span-3 md:col-span-2 grid grid-cols-1 text-orange-600 mt-4 border-t border-orange-500 pt-4">
                     <span className="font-bold uppercase">{search_form.demo_title}</span><span>{search_form.demo_note}</span>
                 </div>

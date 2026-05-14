@@ -73,10 +73,10 @@ class Command(BaseCommand):
     def _format_duration(self, duration=0):
         hours, r = divmod(duration, 3600)
         minutes, r = divmod(r, 60)
-        return f"{hours} h | " + f"{minutes} min"
+        return f"{hours} h " + f"{minutes} min"
 
     def _get_demo_search_results(self) -> tuple[list[dict]]:
-        # Hardcoded search filter values for demo purpose - will be exposed via the search form in the real search.
+        # Hardcoded filter values for the demo. The real search will expose these via the form.
         demo_language = "en"
         demo_window_start = timezone.now() - timedelta(days=7)
         demo_weekdays = [1, 2, 3, 4, 5, 6, 7]
@@ -86,7 +86,7 @@ class Command(BaseCommand):
         demo_max_viewers = 100000
         demo_genre_ids = [5]  # GameGenre.host_genre_id values
 
-        # Select top streamers with streams depending on the filtered streams list.
+        # Aggregate top streamers from the filtered stream set.
         top_streamer_aggregates = list(
             Stream.objects.filter(
                 status=Stream.Status.APPROVED,
@@ -109,28 +109,28 @@ class Command(BaseCommand):
                 host_display_name=F("streamer_profile__host_display_name")
             )
             .values(
-                loging=F("host_login"),
+                login=F("host_login"),
                 display_name=F("host_display_name"),
                 profile_id=F("streamer_profile_id")
             )
             .annotate(
-                tracked_streams=Count("id"),
                 peak_viewers=Max("max_viewers"),
                 max_duration=Max("duration"),
                 avg_duration=Avg("duration"),
                 min_duration=Min("duration"),
-                languages=ArrayAgg("language", distinct=True),
                 streams=JSONBAgg(
                     JSONObject(
                         id="id",
                         duration="duration",
                         max_viewers="max_viewers",
                         language="language",
-                        game_ids="host_game_ids"
+                        game_ids="host_game_ids",
+                        started_at="started_at",
+                        finished_at="finished_at"
                     )
                 )
             )
-            .order_by("-peak_viewers", "-tracked_streams")[: self.home_top_n]
+            .order_by("-peak_viewers")[: self.home_top_n]
         )
 
         # Resolve every referenced game in a single query.
@@ -146,7 +146,7 @@ class Command(BaseCommand):
             .values_list("host_game_id", "host_name")
         )
 
-        # replace
+        # Replace game_ids with human-readable game names and format the duration.
         for one_streamer in top_streamer_aggregates:
             for stream in one_streamer.get("streams", []):
                 stream["games"] = [
@@ -205,7 +205,7 @@ class Command(BaseCommand):
                 self._get_search_form_field(
                     filter_type="dropdown",
                     filter_name="time_window",
-                    filter_label="Time Window",
+                    filter_label="Time Window *",
                     multi_values=[
                         {"v": "7", "l": "1 Week"},
                         {"v": "14", "l": "2 Weeks"},
@@ -224,7 +224,7 @@ class Command(BaseCommand):
                 self._get_search_form_field(
                     filter_type="multiselect",
                     filter_name="week_days",
-                    filter_label="Days of Week",
+                    filter_label="Days of Week *",
                     multi_values=[
                         {"v": "1", "l": "Mon"},
                         {"v": "2", "l": "Tue"},
@@ -237,13 +237,13 @@ class Command(BaseCommand):
                     multi_default=["1", "5", "6", "7"],
                 ),
             ],
-            "button_text": "Search",
+            "button_text": "Apply Filters",
             "demo_title": f"Note:",
             "search_notes": [
-                "* Times are UTC. Day-of-week and the days window both key off when each stream went offline; UTC days can straddle two local days in non-UTC zones."
+                "Times are in UTC. Day of week and the time window are both based on when each stream went offline. A UTC day can straddle two local days in non-UTC zones."
             ],
-            "demo_note": f"The search form is a demo example of the real search form which currently is under active development."
-                f" The results below fit the the real search results for the search parameters prefilled in the form.",
+            "demo_note": f"The search form is a demo of the real search form, which is currently under active development."
+                f" The results below are real, matching the search parameters prefilled in the form.",
         }
 
     def _update_home_page(self):
@@ -255,53 +255,55 @@ class Command(BaseCommand):
             "description": f"Find Twitch streamers worth pitching your indie game to",
             "info": f"Currently tracking {total_streamers:,} streamers across {total_streams:,} observed streams",
             "project_goal": {
-                "title": f"What is the project created for",
+                "title": f"What this project is for",
                 "description": f"The project aims to help indie developers find and collaborate with streamers who regularly broadcast specific game genres to a relevant audience."
-                    f" The platform accumulates only statistics data based on publicly available information provided by the Twitch streaming platform"
-                    f" via the Helix API. We do not collect or share any private information. We only provide a link to the Twitch channel for the tracked streamers.",
+                    f" The platform only aggregates statistics from publicly available information provided by Twitch via the Helix API."
+                    f" We do not collect or share any private information. We only provide a link to the Twitch channel for each tracked streamer.",
             },
             "search_form": self._get_search_form(),
             "search_results": self._get_demo_search_results(),
             "roadmap": {
                 "title": f"What's Coming",
-                "description": f"The project is in an active development stage. The ranking table above is showing real data, which is updated hourly, but only for"
-                    f" demonstration purposes. There are planned features which will include:",
+                "description": f"The project is in active development. The ranking table above shows real data, updated hourly, but for demonstration purposes only."
+                    f" Planned features include:",
                 "features": [
-                    f"Advanced search (available for registered users) - to find streamers by game genre, average and maximum viewers number, language, number of streams,"
-                        f" duration of streams within a certain time frame or in total, and other useful search parameters.",
-                    f"Export search results in preferred file format.",
+                    f"Advanced search (available to registered users) - find streamers by game genre, average and maximum viewer counts, language, number of streams,"
+                        f" stream duration over a given time frame or in total, and other useful search parameters.",
+                    f"Export search results in your preferred file format.",
                     f"Individual streamer page with detailed metrics for each stream.",
                     f"Other features under consideration.",
                     # Possible next features:
                     #   'Developer profile' with extra features:
-                    #       - Create list of favorite streamers - select certain streamers from the search results and add them to the stored list (can be helpful to select
-                    #           only certain streamers from the search results)
-                    #       - Add notes for the streamers inside the favorite list - for example, notes whether and when the developer contacted the streamer and what the streamer
-                    #           answered or ignored the message, etc - the communication is assumed outside the platform for now, but the notices can help to organize the search results
-                    #       - Mark streamers inside the favorite list with different colors to visually distinguish them inside the list which may help to organize the list
-                    #       - Sort streamers inside the favorite list - ability to change position of certain streamer in the list
-                    #       - Common notes and custom names for each favorite list - this may help to organize different favorite lists for easier navigation between them
-                    #       - Store up to N search results - this may help to return to the search results later and compare them with newest search results
-                    #            (maybe + 'compare tool' to find intersection rows e.g. streamers who are present in 2 or more search results)
+                    #       - Create a favorites list of streamers - pick selected streamers from the search results and save them to a stored list
+                    #           (useful for narrowing a larger result set down to the ones worth following up on).
+                    #       - Add notes to streamers in the favorites list - e.g. whether and when the developer contacted the streamer, and what the streamer
+                    #           replied or whether they ignored the message. Communication itself is assumed to happen outside the platform for now, but these notes
+                    #           help organize the search results.
+                    #       - Mark streamers in the favorites list with different colors to visually distinguish them - helps with organization.
+                    #       - Sort streamers in the favorites list - reorder entries manually.
+                    #       - Per-list notes and custom names for each favorites list - makes it easier to navigate between multiple lists.
+                    #       - Store up to N past search results - lets the user revisit previous searches and compare them with newer ones
+                    #           (maybe also a 'compare tool' to find streamers appearing in two or more search results).
                     # MAYBE LATER:
-                    #   'Streamer profile' - this may help streamers be found by developers who are interested in a collaboration where the
-                    #       streamers can deliberately leave a message and contact information - probably, it will require manual moderation or via AI (or both)?
-                    #   'Public developer profile' - if some developers want to use the platform as an additional advertisement channel for
-                    #       their game(s) - probably, it will require manual moderation or via AI (or both)?
-                    #   Features for make the communication easier for both sides (the idea is to provide dedicated place for communication and not to force anyone to use the platform for this if they prefer another communication channels):
+                    #   'Streamer profile' - lets streamers be discovered by developers interested in collaboration; streamers can voluntarily
+                    #       leave a message and contact info. Likely needs manual moderation, AI moderation, or both.
+                    #   'Public developer profile' - for developers who want to use the platform as an additional promotion channel
+                    #       for their game(s). Likely needs manual moderation, AI moderation, or both.
+                    #   Features to make communication easier on both sides (the idea is to offer a dedicated place for communication without forcing anyone
+                    #   to use the platform if they prefer other channels):
                     #       - direct messages
-                    #       - built-in Zoom calls and meetings or similar
+                    #       - built-in Zoom-style calls and meetings
                     #       - ratings and statistics
-                    #       - integrated promocodes (to make collaboration more automated and reduce overhead costs for both sides)
-                    #       - AI best matching search (as a quick start option for those, who don't like spend time for thorough search pr want to reduce overhead costs)
+                    #       - integrated promo codes (to make collaboration more automated and reduce overhead for both sides)
+                    #       - AI best-match search (a quick-start option for users who don't want to spend time on a thorough search or want to reduce overhead)
                 ]
             },
             "methodology": {
                 "title": f"Top Streamers",
-                "description": f"We poll live streams every 20 minutes on the Twitch streaming platform via its Helix API."
-                    f" Every snapshot contains game, number of viewers, date and time."
-                    f" When a stream is off, we calculate the maximum number of viewers on the stream via snapshots history collected during the stream,"
-                    f" and if the stream has at least 3 viewers in any of the snapshots, we add the stream to the streamer's statistics.",
+                "description": f"We poll live Twitch streams every 20 minutes via the Helix API."
+                    f" Each snapshot records the game, viewer count, date, and time."
+                    f" Once a stream ends, we compute its peak viewer count from the snapshots collected while it was live,"
+                    f" and if any snapshot recorded at least 3 viewers, we add the stream to the streamer's statistics.",
             },
             "cta": {
                 "title": f"Get notified when advanced search goes live",

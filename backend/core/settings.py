@@ -157,7 +157,7 @@ _log_handlers = {
 }
 if not _RUNNING_TESTS:
     _log_handlers["fetch_file"] = {
-        "class": "logging.handlers.TimedRotatingFileHandler",
+        "class": "core.logging.SafeTimedRotatingFileHandler",
         "filename": str(LOG_DIR / "fetch.log"),
         "when": "midnight",
         "backupCount": 14,
@@ -165,7 +165,7 @@ if not _RUNNING_TESTS:
         "formatter": "verbose",
     }
     _log_handlers["pages_file"] = {
-        "class": "logging.handlers.TimedRotatingFileHandler",
+        "class": "core.logging.SafeTimedRotatingFileHandler",
         "filename": str(LOG_DIR / "pages.log"),
         "when": "midnight",
         "backupCount": 14,

@@ -72,11 +72,11 @@ export default async function Home() {
                             <form>
                                 <fieldset className="flex flex-row justify-center flex-wrap">
                                     <input type="email" id="top_cta_email" autoComplete="off" name="email" required={true}
-                                        className="bg-white px-4 py-3 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 border border-gray-200 focus-visible:outline-gray-400"
+                                        className="bg-white px-4 py-2 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 border border-gray-200 focus-visible:outline-gray-400"
                                         placeholder={content.cta.input_placeholder}
                                         defaultValue="" />
                                     <button type="submit"
-                                        className="bg-orange-500 px-8 py-3 mx-auto md:ml-3 lg:ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200 min-w-40 mt-6 md:mt-0 lg:mt-0"
+                                        className="bg-orange-500 px-8 py-2 mx-auto md:ml-3 lg:ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200 min-w-40 mt-6 md:mt-0 lg:mt-0"
                                     >{content.cta.btn_text}</button>
                                 </fieldset>
                             </form>
@@ -112,11 +112,11 @@ export default async function Home() {
                     <form className="mb-32">
                         <fieldset className="flex flex-row justify-center flex-wrap">
                             <input type="email" id="footer_cta_email" autoComplete="off" name="email" required={true}
-                                className="bg-white px-4 py-3 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 focus-visible:outline-gray-400"
+                                className="bg-white px-4 py-2 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 focus-visible:outline-gray-400"
                                 placeholder={content.cta.input_placeholder}
                                 defaultValue="" />
                             <button type="submit"
-                                className="bg-orange-500 px-8 py-3 mx-auto md:ml-3 lg:ml-3 rounded-sm hover:bg-orange-600 cursor-pointer min-w-40 mt-6 md:mt-0 lg:mt-0"
+                                className="bg-orange-500 px-8 py-2 mx-auto md:ml-3 lg:ml-3 rounded-sm hover:bg-orange-600 cursor-pointer min-w-40 mt-6 md:mt-0 lg:mt-0"
                             >{content.cta.btn_text}</button>
                         </fieldset>
                     </form>
