@@ -39,14 +39,14 @@ export function SearchStreamerResultsList({ search_results }: { search_results: 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 items-center pb-4">
                         <div className="font-bold text-lg">{one_result.display_name}</div>
                         <div className="flex flex-col md:flex-row lg:flex-row justify-end gap-6">
-                            <a className="inline-block px-6 py-2 bg-twitch-brand text-white font-medium rounded hover:bg-twitch-brand-dark min-w-40 text-center"
+                            <a className="inline-block px-6 py-2 bg-twitch-brand text-white font-medium rounded hover:bg-twitch-brand-dark min-w-40 text-center border border-twitch-brand hover:border-twitch-brand-dark"
                                 href={twitchUrl + one_result.login} target="_blank" rel="nofollow">Visit Channel</a>
                             {/* TODO: set URL for 'View profile' link - should open a streamer profile page with all information available. */}
                             {/* TBD: should the link to a streamer's dedicated page use rel="nofollow"? There will be hundreds of thousands of streamers, and the profile
                             pages will be generated dynamically from a single template that shows all of a streamer's stream data (probably paginated). The project likely does
                             not need these pages indexed by search crawlers - same for the sitemap. An alternative is to keep one static page URL with common content and
                             render streamer-specific stats based on an ID in the URL. */}
-                            <a className="inline-block px-6 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark min-w-40 text-center"
+                            <a className="inline-block px-6 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark min-w-40 text-center border border-brand-blue hover:border-brand-blue-dark"
                                 href="#" target="_blank" rel="nofollow">View profile</a>
                         </div>
                     </div>
