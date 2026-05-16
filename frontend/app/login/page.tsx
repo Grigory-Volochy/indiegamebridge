@@ -5,13 +5,39 @@ export const metadata: Metadata = {
     robots: { index: false, follow: false },
 };
 
-export default function LoginPage() {
+function buildTwitchLoginUrl(rawNext: string | undefined): string {
+    // Only forward a same-app path through the OAuth dance - never an absolute URL.
+    const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+    const finalize = `/auth/finalize-login/?next=${encodeURIComponent(next)}`;
+    return `/accounts/twitch/login/?process=login&next=${encodeURIComponent(finalize)}`;
+}
+
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }>; }) {
+    const { next } = await searchParams;
+    const twitchLoginUrl = buildTwitchLoginUrl(next);
+
     return (
         <main className="flex-1 px-6">
-            <div className="max-w-md mx-auto py-24 text-center">
-                <h1 className="text-2xl font-bold mb-4">Log in</h1>
-                <p className="text-gray-600">
-                    Authentication is coming soon. You&apos;ll be able to sign in with Twitch to search streamers and view their profiles.
+            <div className="max-w-md mx-auto py-24">
+                <h1 className="text-2xl font-bold mb-6 text-center">Log in</h1>
+                <p className="text-gray-600 mb-8 text-center">
+                    IndieGameBridge uses your Twitch account to verify you. We never see your password.
+                </p>
+                <a
+                    href={twitchLoginUrl}
+                    className="flex items-center justify-center gap-3 px-6 py-3 bg-twitch-brand text-white font-medium rounded hover:bg-twitch-brand-dark border border-twitch-brand hover:border-twitch-brand-dark w-full"
+                >
+                    <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        className="w-5 h-5 fill-current"
+                    >
+                        <path d="M4.265 0L1 3.265v17.47h5.47V24h3.265l3.265-3.265h5.47L24 14.47V0H4.265zm17.47 13.265L18.47 16.53h-5.47l-3.265 3.265V16.53H5.47V2.265h16.265v11zm-5.47-6.53h-2.265v6.53h2.265v-6.53zm-5.47 0H8.53v6.53h2.265v-6.53z" />
+                    </svg>
+                    <span>Log in with Twitch</span>
+                </a>
+                <p className="text-xs text-gray-500 mt-8 text-center">
+                    More login options coming later.
                 </p>
             </div>
         </main>

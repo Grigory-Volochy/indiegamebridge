@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useState } from "react";
 
 export type StreamData = {
     id: string;
@@ -42,9 +41,8 @@ export function SearchStreamerResultsList({ search_results }: { search_results: 
                         <div className="flex flex-col md:flex-row lg:flex-row justify-end gap-6">
                             <a className="inline-block px-6 py-2 bg-twitch-brand text-white font-medium rounded hover:bg-twitch-brand-dark min-w-40 text-center border border-twitch-brand hover:border-twitch-brand-dark"
                                 href={twitchUrl + one_result.login} target="_blank" rel="nofollow">Visit Channel</a>
-                            {/* TODO: route authenticated users directly to the streamer profile page instead of /login. */}
                             <Link className="inline-block px-6 py-2 bg-brand-blue text-white font-medium rounded hover:bg-brand-blue-dark min-w-40 text-center border border-brand-blue hover:border-brand-blue-dark"
-                                href="/login" rel="nofollow" title="Log in to view the profile">View profile</Link>
+                                href={`/streamers/${one_result.login}`} rel="nofollow" title="View streamer profile">View profile</Link>
                         </div>
                     </div>
                     <div className="border-gray-200 border-t pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

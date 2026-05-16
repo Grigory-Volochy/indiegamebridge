@@ -1,5 +1,6 @@
 import { Fragment } from "react/jsx-runtime";
-import { SearchStreamerForm, SearchStreamerResultsList, SearchFormData, StreamerData } from "./_components";
+import { AuthStatus, SearchStreamerForm, SearchStreamerResultsList, SearchFormData, StreamerData } from "./_components";
+import { getCurrentUser } from "./_lib/auth";
 
 type Section = {
     title: string;
@@ -33,7 +34,10 @@ type HomePageContent = {
 
 export default async function Home() {
     const apiBase = process.env.API_BASE_URL ?? "http://localhost:8000";
-    const response = await fetch(`${apiBase}/pages/home/`);
+    const [response, user] = await Promise.all([
+        fetch(`${apiBase}/pages/home/`),
+        getCurrentUser(),
+    ]);
 
     if (!response.ok) {
         throw new Error(`Failed to load home page content (status ${response.status})`);
@@ -46,6 +50,9 @@ export default async function Home() {
             {/* Header */}
             <header className="pt-16 pb-12 px-6 bg-brand-blue text-white shadow-sm shadow-gray-200">
                 <div className="max-w-[1000] mx-auto">
+                    <div className="flex justify-end mb-2">
+                        <AuthStatus user={user} />
+                    </div>
                     <h1 className="text-3xl font-bold">{content.title}</h1>
                     <p className="mt-6 text-lg">{content.description}</p>
                     <p className="mt-6 text-sm opacity-70">{content.info}</p>
@@ -123,6 +130,9 @@ export default async function Home() {
                 </section>
                 <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
                     {content.data_source}
+                </section>
+                <section className="max-w-[1000] mx-auto mt-8 flex justify-center">
+                    <AuthStatus user={user} />
                 </section>
             </footer>
         </Fragment>
