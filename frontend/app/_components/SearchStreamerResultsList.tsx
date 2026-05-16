@@ -33,7 +33,7 @@ export function SearchStreamerResultsList({ search_results }: { search_results: 
 
     return (
         <div className="pt-4">
-            <div className="text-center text-brand-blue uppercase">Search Results</div>
+            <div className="text-center text-brand-blue uppercase text-lg">Search Results</div>
             {search_results.map((one_result, index) => (
                 <div key={`search-result-${index}`} className="border border-gray-200 p-6 mt-6 rounded-sm shadow-sm shadow-gray-200 bg-white">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 items-center pb-4">

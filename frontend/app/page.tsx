@@ -1,6 +1,7 @@
 import { Fragment } from "react/jsx-runtime";
 import { AuthStatus, SearchStreamerForm, SearchStreamerResultsList, SearchFormData, StreamerData } from "./_components";
 import { getCurrentUser } from "./_lib/auth";
+import Link from "next/link";
 
 type Section = {
     title: string;
@@ -28,8 +29,9 @@ type HomePageContent = {
     search_results: StreamerData[];
     methodology: Section;
     roadmap: FeaturedSection;
-    data_source: string;
     cta: CallToAction;
+    data_source: string;
+    opt_out_text: string;
 };
 
 export default async function Home() {
@@ -75,7 +77,7 @@ export default async function Home() {
                     <div className="max-w-[1000] mx-auto pt-4 pb-16">
                         <SearchStreamerForm search_form={content.search_form}></SearchStreamerForm>
                         <div className="my-8 p-6 border border-orange-500 rounded-sm bg-white shadow-sm shadow-gray-200">
-                            <h2 className="text-xl mb-4">{content.cta.title}</h2>
+                            <h2 className="text-lg mb-4">{content.cta.title}</h2>
                             <form>
                                 <fieldset className="flex flex-row justify-center flex-wrap">
                                     <input type="email" id="top_cta_email" autoComplete="off" name="email" required={true}
@@ -93,13 +95,13 @@ export default async function Home() {
                 </section>
 
                 {/* Methodology */}
-                <section className="w-full px-6">
+                <section className="border-t border-gray-200 px-6">
                     <div className="max-w-[1000] mx-auto py-8">
-                        <h2>{content.methodology.title}</h2>
+                        <h2 className="text-2xl font-bold mb-4">{content.methodology.title}</h2>
                         <p>{content.methodology.description}</p>
                     </div>
                 </section>
-                <section className="border-t border-gray-200 shadow-sm shadow-gray-200 px-6">
+                <section className="border-t border-gray-200 px-6">
                     <div className="max-w-[1000] mx-auto py-16">
                         <h2 className="text-2xl font-bold mb-4">{content.roadmap.title}</h2>
                         <p>{content.roadmap.description}</p>
@@ -115,7 +117,7 @@ export default async function Home() {
             {/* Footer */}
             <footer className="pt-16 pb-12 px-6 bg-brand-blue text-white">
                 <section className="max-w-[1000] mx-auto">
-                    <h2 className="mb-5 text-xl">{content.cta.title}</h2>
+                    <h2 className="mb-5 text-lg">{content.cta.title}</h2>
                     <form className="mb-32">
                         <fieldset className="flex flex-row justify-center flex-wrap">
                             <input type="email" id="footer_cta_email" autoComplete="off" name="email" required={true}
@@ -129,10 +131,11 @@ export default async function Home() {
                     </form>
                 </section>
                 <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
-                    {content.data_source}
-                </section>
-                <section className="max-w-[1000] mx-auto mt-8 flex justify-center">
-                    <AuthStatus user={user} />
+                    <span>{content.data_source}</span>
+                    <Link className="ml-2 text-blue-400 hover:text-blue-300" 
+                        href={`/optout`}
+                        rel="nofollow"
+                        title="Opt out">{content.opt_out_text}</Link>
                 </section>
             </footer>
         </Fragment>

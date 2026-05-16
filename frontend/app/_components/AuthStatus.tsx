@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 export type AuthStatusProps = {
     user: {
-        id: number;
+        twitch_id: number;
         username: string;
         display_name: string;
         email: string;
@@ -38,7 +38,7 @@ export function AuthStatus({ user }: AuthStatusProps) {
 
     return (
         <div className="text-sm flex items-center gap-3">
-            <span className="opacity-80">Hi, {user.display_name} | {user.email} | {user.id}</span>
+            <span className="opacity-80">Hi, {user.display_name}</span>
             <button
                 type="button"
                 onClick={handleLogout}

@@ -1,3 +1,4 @@
-from apps.users.models.user import User
+from .user import User
+from .twitch_exclusion import TwitchExclusion
 
-__all__ = ["User"]
+__all__ = ["User", "TwitchExclusion"]

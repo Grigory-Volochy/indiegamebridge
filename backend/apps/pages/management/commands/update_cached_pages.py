@@ -240,10 +240,10 @@ class Command(BaseCommand):
             "button_text": "Apply Filters",
             "demo_title": f"Note:",
             "search_notes": [
-                "Times are in UTC. Day of week and the time window are both based on when each stream went offline. A UTC day can straddle two local days in non-UTC zones."
+                "Times are in UTC. Days of week and the time window are both based on when each stream went offline. A UTC day can straddle two local days in non-UTC zones."
             ],
             "demo_note": f"The search form is a demo of the real search form, which is currently under active development."
-                f" The results below are real, matching the search parameters prefilled in the form.",
+                f" The results below are real, matching the search parameters prefilled in the form and updating hourly.",
         }
 
     def _update_home_page(self):
@@ -299,7 +299,7 @@ class Command(BaseCommand):
                 ]
             },
             "methodology": {
-                "title": f"Top Streamers",
+                "title": f"Methodology",
                 "description": f"We poll live Twitch streams every 20 minutes via the Helix API."
                     f" Each snapshot records the game, viewer count, date, and time."
                     f" Once a stream ends, we compute its peak viewer count from the snapshots collected while it was live,"
@@ -310,7 +310,8 @@ class Command(BaseCommand):
                 "input_placeholder": "your@email.com",
                 "btn_text": "Notify Me",
             },
-            "data_source": f"Data sourced from public Twitch streams. Streamers can opt out at any time.",
+            "data_source": f"Data sourced from public Twitch streams. Streamers can opt out at any time:",
+            "opt_out_text": "opt out"
         }
 
         CachedPage.objects.update_or_create(

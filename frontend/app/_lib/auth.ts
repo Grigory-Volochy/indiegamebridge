@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 
 export type CurrentUser = {
-    id: number;
+    twitch_id: number;
     username: string;
     display_name: string;
     email: string;
+    is_twitch_excluded: boolean;
 };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -17,7 +18,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     // Fail soft: a backend outage or a 4xx shouldn't take down pages that
     // happen to call this. The page just renders in logged-out state.
     try {
-        const response = await fetch(`${apiBase}/auth/me/`, {
+        const response = await fetch(`${apiBase}/auth/currentuser/`, {
             headers: { cookie: cookieHeader },
             cache: "no-store",
         });
