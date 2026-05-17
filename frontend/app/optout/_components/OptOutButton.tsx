@@ -8,7 +8,7 @@ function readCookie(name: string): string {
     return match ? decodeURIComponent(match[1]) : "";
 }
 
-export function OptOutButton() {
+export function OptOutButton({ label }: { label: string }) {
     const router = useRouter();
     const [pending, setPending] = useState(false);
 
@@ -29,7 +29,7 @@ export function OptOutButton() {
             disabled={pending}
             className="flex items-center justify-center gap-3 px-6 py-3 bg-red-600 text-white font-medium rounded hover:bg-red-700 border border-red-600 hover:border-red-700 w-full disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         >
-            Opt Out
+            {label}
         </button>
     );
 }

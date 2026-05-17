@@ -1,10 +1,9 @@
 import logging
 from datetime import timedelta
-import json
 
-from django.contrib.postgres.aggregates import ArrayAgg, JSONBAgg
+from django.contrib.postgres.aggregates import JSONBAgg
 from django.core.management.base import BaseCommand
-from django.db.models import Count, Max, Avg, Min, F
+from django.db.models import Max, Avg, Min, F
 from django.db.models.functions import ExtractIsoWeekDay, JSONObject
 from django.utils import timezone
 
@@ -23,6 +22,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         logger.info("Updating cached pages...")
         self._update_home_page()
+        self._update_opt_out_page()
         logger.info("Cached pages update finished.")
 
     def _get_search_form_field(self, **kwargs):
@@ -78,7 +78,7 @@ class Command(BaseCommand):
     def _get_demo_search_results(self) -> tuple[list[dict]]:
         # Hardcoded filter values for the demo. The real search will expose these via the form.
         demo_language = "en"
-        demo_window_start = timezone.now() - timedelta(days=7)
+        demo_window_start = timezone.now() - timedelta(days=14)
         demo_weekdays = [1, 2, 3, 4, 5, 6, 7]
         demo_min_duration = 1800
         demo_max_duration = 36000
@@ -258,20 +258,18 @@ class Command(BaseCommand):
                 "title": f"What this project is for",
                 "description": f"The project aims to help indie developers find and collaborate with streamers who regularly broadcast specific game genres to a relevant audience."
                     f" The platform only aggregates statistics from publicly available information provided by Twitch via the Helix API."
-                    f" We do not collect or share any private information. We only provide a link to the Twitch channel for each tracked streamer.",
+                    f" We do not collect or share any private information.",
             },
             "search_form": self._get_search_form(),
             "search_results": self._get_demo_search_results(),
             "roadmap": {
                 "title": f"What's Coming",
-                "description": f"The project is in active development. The ranking table above shows real data, updated hourly, but for demonstration purposes only."
+                "description": f"The project is in active development."
                     f" Planned features include:",
                 "features": [
-                    f"Advanced search (available to registered users) - find streamers by game genre, average and maximum viewer counts, language, number of streams,"
-                        f" stream duration over a given time frame or in total, and other useful search parameters.",
                     f"Export search results in your preferred file format.",
-                    f"Individual streamer page with detailed metrics for each stream.",
-                    f"Other features under consideration.",
+                    f"Developer profile with extra features.",
+                    f"Streamer profile with extra features.",
                     # Possible next features:
                     #   'Developer profile' with extra features:
                     #       - Create a favorites list of streamers - pick selected streamers from the search results and save them to a stored list
@@ -310,8 +308,18 @@ class Command(BaseCommand):
                 "input_placeholder": "your@email.com",
                 "btn_text": "Notify Me",
             },
-            "data_source": f"Data sourced from public Twitch streams. Streamers can opt out at any time:",
-            "opt_out_text": "opt out"
+            "data_source": f"Data sourced from public Twitch streams. Streamers can %opt_out_link% at any time.",
+            "opt_out_text": "opt out",
+            "footer_links": [
+                {
+                    "text": "Request removal",
+                    "url": "https://todo" 
+                },
+                {
+                    "text": "GitHub",
+                    "url": "/optout" 
+                }
+            ],
         }
 
         CachedPage.objects.update_or_create(
@@ -323,3 +331,26 @@ class Command(BaseCommand):
             "Home page cache updated:%s total streamers, %s total streams",
             total_streamers, total_streams,
         )
+
+    def _update_opt_out_page(self):
+        content = {
+            "title": f"Opt Out",
+            "return_home": f"Return to Home Page",
+            "not_logged_in": {
+                "prompt": f"Want to opt out? Click below to log in with your Twitch account so we can verify your Twitch ID. We will then remove all data tied to it and exclude it from future collection.",
+                "login_btn": f"Log in with Twitch to verify your Twitch ID",
+            },
+            "logged_in": {
+                "prompt": f"Want to opt out? Click below to confirm. We will remove all data tied to your Twitch ID and exclude it from future collection.",
+                "optout_btn": f"Opt Out",
+            },
+            "already_optout": f"You have already opted out, and we have handled it. No action required - we no longer collect or store any data about your streams.",
+            "success_optout": f"We have verified your Twitch ID and removed all data tied to it. Going forward, we will exclude it from future collection. The public page may still show your data for up to an hour while caches refresh.",
+        }
+
+        CachedPage.objects.update_or_create(
+            key="optout",
+            defaults={"content": content},
+        )
+
+        logger.info("Opt-out page cache updated.")

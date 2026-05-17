@@ -47,6 +47,8 @@ export default async function Home() {
 
     const content: HomePageContent = await response.json();
 
+    const opt_out_link = <Link className="text-blue-400 hover:text-blue-300" href={`/optout`} rel="nofollow" title="Opt out">{content.opt_out_text}</Link>;
+
     return (
         <Fragment>
             {/* Header */}
@@ -96,7 +98,7 @@ export default async function Home() {
 
                 {/* Methodology */}
                 <section className="border-t border-gray-200 px-6">
-                    <div className="max-w-[1000] mx-auto py-8">
+                    <div className="max-w-[1000] mx-auto py-16">
                         <h2 className="text-2xl font-bold mb-4">{content.methodology.title}</h2>
                         <p>{content.methodology.description}</p>
                     </div>
@@ -104,11 +106,11 @@ export default async function Home() {
                 <section className="border-t border-gray-200 px-6">
                     <div className="max-w-[1000] mx-auto py-16">
                         <h2 className="text-2xl font-bold mb-4">{content.roadmap.title}</h2>
-                        <p>{content.roadmap.description}</p>
-                        <ul>
-                        {content.roadmap.features.map((feature, index) => (
-                            <li key={"coming-feature-" + index}>{feature}</li>
-                        ))}
+                        <p className="pb-2">{content.roadmap.description}</p>
+                        <ul className="list-disc pl-5">
+                            {content.roadmap.features.map((feature, index) => (
+                                <li key={"coming-feature-" + index} className="py-2">{feature}</li>
+                            ))}
                         </ul>
                     </div>
                 </section>
@@ -130,12 +132,16 @@ export default async function Home() {
                         </fieldset>
                     </form>
                 </section>
+                <section>
+                    
+                </section>
                 <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
-                    <span>{content.data_source}</span>
-                    <Link className="ml-2 text-blue-400 hover:text-blue-300" 
-                        href={`/optout`}
-                        rel="nofollow"
-                        title="Opt out">{content.opt_out_text}</Link>
+                    <div>{content.data_source.split('%opt_out_link%').map((part, i, arr) => (
+                        <Fragment key={i}>
+                            {part}
+                            {i < arr.length - 1 && opt_out_link}
+                        </Fragment>
+                    ))}</div>
                 </section>
             </footer>
         </Fragment>

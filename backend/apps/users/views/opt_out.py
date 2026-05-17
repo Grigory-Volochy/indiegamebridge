@@ -15,10 +15,11 @@ from apps.users.cookies import clear_jwt_cookies
 from apps.users.models import TwitchExclusion
 
 
-def perform_opt_out(user) -> str | None:
+def perform_opt_out(user) -> bool | None:
     """Resolve the user's Twitch ID via allauth's SocialAccount and record the
-    opt-out in TwitchExclusion. Returns the Twitch UID, or None if no Twitch
-    account is linked. Idempotent: re-clicking does not refresh optout_at.
+    opt-out in TwitchExclusion. Returns True if a new exclusion was created,
+    False if the user was already opted out, or None if no Twitch account is
+    linked. Idempotent: re-clicking does not refresh optout_at.
 
     Future work: also erase user-owned data outside the exclusion record.
     """
@@ -27,8 +28,8 @@ def perform_opt_out(user) -> str | None:
         print("opt out requested but no twitch social account linked")
         return None
 
-    TwitchExclusion.objects.get_or_create(twitch_id=social.uid)
-    return social.uid
+    _, is_new_opt_out = TwitchExclusion.objects.get_or_create(twitch_id=social.uid)
+    return is_new_opt_out
 
 
 @method_decorator(csrf_protect, name="dispatch")

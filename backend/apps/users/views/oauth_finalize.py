@@ -37,6 +37,7 @@ class OAuthFinalizeView(APIView):
     * default - mint a JWT pair, set HttpOnly cookies, flush the session
       (so JWT is the single source of truth post-login), redirect to the
       frontend.
+
     * action=optout - read the Twitch UID via allauth's SocialAccount,
       record the opt-out, flush the session, skip JWT entirely, and
       redirect to the opt-out success view. Same OAuth entry point as
@@ -59,13 +60,18 @@ class OAuthFinalizeView(APIView):
 
         next_url = _safe_next_url(request.GET.get("next"))
 
+        # Logged in for opt out
         if request.GET.get("action") == "optout":
-            perform_opt_out(request.user)
+            is_new_opt_out = perform_opt_out(request.user)
+            separator = "&" if urlparse(next_url).query else "?"
+            new_param_val = "error" if is_new_opt_out is None else "yes" if is_new_opt_out else "no"
+            next_url = f"{next_url}{separator}new={new_param_val}"
             response = HttpResponseRedirect(next_url)
             django_logout(request)
             clear_jwt_cookies(response)
             return response
 
+        # Normal log in
         refresh = RefreshToken.for_user(request.user)
         response = HttpResponseRedirect(next_url)
         set_jwt_cookies(response, str(refresh.access_token), str(refresh))
