@@ -37,12 +37,12 @@ export function AuthStatus({ user }: AuthStatusProps) {
     }
 
     return (
-        <div className="text-sm flex items-center gap-3">
+        <div className="text-sm flex items-center gap-x-8 gap-y-2 flex-col md:flex-row lg:flex-row">
             <span className="opacity-80">Hi, {user.display_name}</span>
             <button
                 type="button"
                 onClick={handleLogout}
-                className="underline hover:opacity-80 cursor-pointer"
+                className="underline hover:opacity-80 cursor-pointer text-blue-400 hover:text-blue-300"
             >
                 Log out
             </button>

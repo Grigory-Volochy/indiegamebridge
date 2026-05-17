@@ -14,22 +14,16 @@ type FeaturedSection = {
     features: string[];
 };
 
-type CallToAction = {
-    title: string;
-    input_placeholder: string;
-    btn_text: string;
-}
-
 type HomePageContent = {
     title: string;
     description: string;
     info: string;
     project_goal: Section;
     search_form: SearchFormData;
+    search_results_title: string;
     search_results: StreamerData[];
     methodology: Section;
     roadmap: FeaturedSection;
-    cta: CallToAction;
     data_source: string;
     opt_out_text: string;
 };
@@ -47,12 +41,12 @@ export default async function Home() {
 
     const content: HomePageContent = await response.json();
 
-    const opt_out_link = <Link className="text-blue-400 hover:text-blue-300" href={`/optout`} rel="nofollow" title="Opt out">{content.opt_out_text}</Link>;
+    const opt_out_link = <Link className="underline text-blue-400 hover:text-blue-300" href={`/optout`} rel="nofollow" title="Opt out">{content.opt_out_text}</Link>;
 
     return (
         <Fragment>
             {/* Header */}
-            <header className="pt-16 pb-12 px-6 bg-brand-blue text-white shadow-sm shadow-gray-200">
+            <header className="pt-10 pb-12 px-6 bg-brand-blue text-white shadow-sm shadow-gray-200">
                 <div className="max-w-[1000] mx-auto">
                     <div className="flex justify-end mb-2">
                         <AuthStatus user={user} />
@@ -78,21 +72,7 @@ export default async function Home() {
                 <section className="px-6">
                     <div className="max-w-[1000] mx-auto pt-4 pb-16">
                         <SearchStreamerForm search_form={content.search_form}></SearchStreamerForm>
-                        <div className="my-8 p-6 border border-orange-500 rounded-sm bg-white shadow-sm shadow-gray-200">
-                            <h2 className="text-lg mb-4">{content.cta.title}</h2>
-                            <form>
-                                <fieldset className="flex flex-row justify-center flex-wrap">
-                                    <input type="email" id="top_cta_email" autoComplete="off" name="email" required={true}
-                                        className="bg-white px-4 py-2 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 border border-gray-200 focus-visible:outline-gray-400"
-                                        placeholder={content.cta.input_placeholder}
-                                        defaultValue="" />
-                                    <button type="submit"
-                                        className="bg-orange-500 px-8 py-2 mx-auto md:ml-3 lg:ml-3 rounded-sm text-white hover:bg-orange-600 cursor-pointer shadow-sm shadow-gray-200 min-w-40 mt-6 md:mt-0 lg:mt-0"
-                                    >{content.cta.btn_text}</button>
-                                </fieldset>
-                            </form>
-                        </div>
-                        <SearchStreamerResultsList search_results={content.search_results}></SearchStreamerResultsList>
+                        <SearchStreamerResultsList search_results={content.search_results} search_results_title={content.search_results_title}></SearchStreamerResultsList>
                     </div>
                 </section>
 
@@ -118,23 +98,6 @@ export default async function Home() {
 
             {/* Footer */}
             <footer className="pt-16 pb-12 px-6 bg-brand-blue text-white">
-                <section className="max-w-[1000] mx-auto">
-                    <h2 className="mb-5 text-lg">{content.cta.title}</h2>
-                    <form className="mb-32">
-                        <fieldset className="flex flex-row justify-center flex-wrap">
-                            <input type="email" id="footer_cta_email" autoComplete="off" name="email" required={true}
-                                className="bg-white px-4 py-2 rounded-sm text-black min-w-40 w-full md:min-w-80 md:w-80 lg:min-w-80 lg:w-80 focus-visible:outline-gray-400"
-                                placeholder={content.cta.input_placeholder}
-                                defaultValue="" />
-                            <button type="submit"
-                                className="bg-orange-500 px-8 py-2 mx-auto md:ml-3 lg:ml-3 rounded-sm hover:bg-orange-600 cursor-pointer min-w-40 mt-6 md:mt-0 lg:mt-0"
-                            >{content.cta.btn_text}</button>
-                        </fieldset>
-                    </form>
-                </section>
-                <section>
-                    
-                </section>
                 <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
                     <div>{content.data_source.split('%opt_out_link%').map((part, i, arr) => (
                         <Fragment key={i}>

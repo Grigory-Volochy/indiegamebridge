@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useState } from "react";
 
 export type FieldData = {
@@ -28,6 +29,7 @@ export type SearchFormData = {
     demo_title: string;
     demo_note: string;
     search_notes: string[];
+    cta_link_text: string;
 };
 
 export function SearchStreamerForm({ search_form }: { search_form: SearchFormData }) {
@@ -176,8 +178,7 @@ export function SearchStreamerForm({ search_form }: { search_form: SearchFormDat
                 <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
                     <div className="col-span-1 md:col-span-1 lg:col-span-2 text-sm italic">
                         {search_form.search_notes.map((one_note, index) => (
-                            <div key={`note-${index}`}
-                                className="before:content-(--note-marker) ml-4 before:absolute before:-left-4 relative"
+                            <div key={`note-${index}`} className="before:content-(--note-marker) ml-4 before:absolute before:-left-4 relative"
                                 style={{ ["--note-marker" as any]: `"${"*".repeat(index + 1)}"` }}
                             >{one_note}</div>
                         ))}
@@ -188,8 +189,14 @@ export function SearchStreamerForm({ search_form }: { search_form: SearchFormDat
                         >{search_form.button_text}</button>
                     </fieldset>
                 </div>
-                <div className="lg:col-span-3 md:col-span-2 grid grid-cols-1 text-orange-600 mt-4 border-t border-orange-500 pt-4">
-                    <span className="font-bold uppercase">{search_form.demo_title}</span><span>{search_form.demo_note}</span>
+                <div className="col-span-1 lg:col-span-3 md:col-span-2 text-orange-600 mt-4 border-t border-orange-500 pt-4">
+                    <div>
+                        <span className="font-bold uppercase">{search_form.demo_title}</span>
+                        <span> {search_form.demo_note}</span>
+                    </div>
+                    <div className="text-center mt-4">
+                        <Link href="/login" className="underline text-blue-700 hover:text-blue-500 ml-2">{search_form.cta_link_text}</Link>
+                    </div>
                 </div>
             </form>
         </div>

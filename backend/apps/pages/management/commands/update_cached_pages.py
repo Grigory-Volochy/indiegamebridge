@@ -23,6 +23,8 @@ class Command(BaseCommand):
         logger.info("Updating cached pages...")
         self._update_home_page()
         self._update_opt_out_page()
+        self._update_contact_page()
+        self._update_login_page()
         logger.info("Cached pages update finished.")
 
     def _get_search_form_field(self, **kwargs):
@@ -242,8 +244,9 @@ class Command(BaseCommand):
             "search_notes": [
                 "Times are in UTC. Days of week and the time window are both based on when each stream went offline. A UTC day can straddle two local days in non-UTC zones."
             ],
-            "demo_note": f"The search form is a demo of the real search form, which is currently under active development."
+            "demo_note": f"The search form is a demo of the real search form, which is available for logged in users."
                 f" The results below are real, matching the search parameters prefilled in the form and updating hourly.",
+            "cta_link_text": f"Log in to use the search"
         }
 
     def _update_home_page(self):
@@ -261,6 +264,7 @@ class Command(BaseCommand):
                     f" We do not collect or share any private information.",
             },
             "search_form": self._get_search_form(),
+            "search_results_title": "Search Results",
             "search_results": self._get_demo_search_results(),
             "roadmap": {
                 "title": f"What's Coming",
@@ -313,11 +317,18 @@ class Command(BaseCommand):
             "footer_links": [
                 {
                     "text": "Request removal",
-                    "url": "https://todo" 
+                    "url": "/optout",
+                    "nofollow": 1,
                 },
                 {
                     "text": "GitHub",
-                    "url": "/optout" 
+                    "url": "/https://github.com/IndieGameBridge/indiegamebridge",
+                    "nofollow": 1,
+                },
+                {
+                    "text": "Contact",
+                    "url": "/contact",
+                    "nofollow": 1,
                 }
             ],
         }
@@ -354,3 +365,32 @@ class Command(BaseCommand):
         )
 
         logger.info("Opt-out page cache updated.")
+
+    def _update_contact_page(self):
+        content = {
+            "title": f"Contact",
+            "return_home": f"Return to Home Page",
+            "body": f"Contact details are coming soon. In the meantime, please reach out via the project's GitHub repository.",
+        }
+
+        CachedPage.objects.update_or_create(
+            key="contact",
+            defaults={"content": content},
+        )
+
+        logger.info("Contact page cache updated.")
+
+    def _update_login_page(self):
+        content = {
+            "title": f"Log in",
+            "prompt": f"IndieGameBridge uses your Twitch account to verify you. We never see your password.",
+            "twitch_login_btn": f"Log in with Twitch",
+            "more_options_note": f"More login options coming later.",
+        }
+
+        CachedPage.objects.update_or_create(
+            key="login",
+            defaults={"content": content},
+        )
+
+        logger.info("Login page cache updated.")
