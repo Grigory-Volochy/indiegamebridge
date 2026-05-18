@@ -90,7 +90,6 @@ export function SearchStreamerForm({ search_form, user }: { search_form: SearchF
                                             ? 'lg:col-span-2 md:col-span-2'
                                             : ''
                                         )
-                                    
                                     : ''
                                 }`}>
                         <legend className="mr-4 text-sm text-brand-blue">{one_filter.filter_label}</legend>

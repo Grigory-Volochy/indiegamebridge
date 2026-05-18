@@ -21,11 +21,63 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         logger.info("Updating cached pages...")
+        self._update_page_header()
+        self._update_page_footer()
         self._update_home_page()
         self._update_opt_out_page()
         self._update_contact_page()
         self._update_login_page()
         logger.info("Cached pages update finished.")
+
+    def _update_page_header(self):
+        total_streamers = StreamerProfile.objects.filter(streams__status=Stream.Status.APPROVED).distinct().count()
+        total_streams = Stream.objects.filter(status=Stream.Status.APPROVED).count()
+
+        header_content = {
+            "title": f"IndieGameBridge",
+            "description": f"Find Twitch streamers worth pitching your indie game to",
+            "info": f"Currently tracking {total_streamers:,} streamers across {total_streams:,} observed streams",
+        }
+
+        CachedPage.objects.update_or_create(
+            key="page_header",
+            defaults={"content": header_content},
+        )
+
+        logger.info("Page header cache updated.")
+
+    def _update_page_footer(self):
+        footer_content = {
+            "data_source": f"Data sourced from public Twitch streams. Streamers can %opt_out_link% at any time.",
+            "opt_out_text": "opt out",
+            "footer_links": [
+                {
+                    "text": "Request removal",
+                    "url": "/optout",
+                    "nofollow": 1,
+                    "is_internal": 1,
+                },
+                {
+                    "text": "GitHub",
+                    "url": "/https://github.com/IndieGameBridge/indiegamebridge",
+                    "nofollow": 1,
+                    "is_internal": 0,
+                },
+                {
+                    "text": "Contact",
+                    "url": "/contact",
+                    "nofollow": 1,
+                    "is_internal": 1,
+                },
+            ],
+        }
+
+        CachedPage.objects.update_or_create(
+            key="page_footer",
+            defaults={"content": footer_content},
+        )
+
+        logger.info("Page footer cache updated.")
 
     def _get_search_form_field(self, **kwargs):
         form_field = {
@@ -250,13 +302,7 @@ class Command(BaseCommand):
         }
 
     def _update_home_page(self):
-        total_streamers = StreamerProfile.objects.filter(streams__status=Stream.Status.APPROVED).distinct().count()
-        total_streams = Stream.objects.filter(status=Stream.Status.APPROVED).count()
-
         content = {
-            "title": f"IndieGameBridge",
-            "description": f"Find Twitch streamers worth pitching your indie game to",
-            "info": f"Currently tracking {total_streamers:,} streamers across {total_streams:,} observed streams",
             "project_goal": {
                 "title": f"What this project is for",
                 "description": f"The project aims to help indie developers find and collaborate with streamers who regularly broadcast specific game genres to a relevant audience."
@@ -307,33 +353,6 @@ class Command(BaseCommand):
                     f" Once a stream ends, we compute its peak viewer count from the snapshots collected while it was live,"
                     f" and if any snapshot recorded at least 3 viewers, we add the stream to the streamer's statistics.",
             },
-            "cta": {
-                "title": f"Get notified when advanced search goes live",
-                "input_placeholder": "your@email.com",
-                "btn_text": "Notify Me",
-            },
-            "data_source": f"Data sourced from public Twitch streams. Streamers can %opt_out_link% at any time.",
-            "opt_out_text": "opt out",
-            "footer_links": [
-                {
-                    "text": "Request removal",
-                    "url": "/optout",
-                    "nofollow": 1,
-                    "is_internal": 1,
-                },
-                {
-                    "text": "GitHub",
-                    "url": "/https://github.com/IndieGameBridge/indiegamebridge",
-                    "nofollow": 1,
-                    "is_internal": 0,
-                },
-                {
-                    "text": "Contact",
-                    "url": "/contact",
-                    "nofollow": 1,
-                    "is_internal": 1,
-                }
-            ],
         }
 
         CachedPage.objects.update_or_create(
@@ -341,10 +360,7 @@ class Command(BaseCommand):
             defaults={"content": content},
         )
 
-        logger.info(
-            "Home page cache updated:%s total streamers, %s total streams",
-            total_streamers, total_streams,
-        )
+        logger.info("Home page cache updated.")
 
     def _update_opt_out_page(self):
         content = {

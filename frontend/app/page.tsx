@@ -1,19 +1,20 @@
 import { Fragment } from "react/jsx-runtime";
-import { AuthStatus, SearchStreamerForm, SearchStreamerResultsList, SearchFormData, StreamerData } from "./_components";
+import { 
+    SearchStreamerForm,
+    SearchStreamerResultsList,
+    SearchFormData,
+    StreamerData,
+    PageHeader,
+    PageHeaderContent,
+    PageFooter,
+    PageFooterContent
+} from "./_components";
 import { getCurrentUser } from "./_lib/auth";
-import Link from "next/link";
 
 type Section = {
     title: string;
     description: string;
 };
-
-type InfoLink = {
-    text: string;
-    url: string;
-    nofollow: number;
-    is_internal: number;
-}
 
 type FeaturedSection = {
     title: string;
@@ -22,18 +23,14 @@ type FeaturedSection = {
 };
 
 type HomePageContent = {
-    title: string;
-    description: string;
-    info: string;
+    header_content: PageHeaderContent;
     project_goal: Section;
     search_form: SearchFormData;
     search_results_title: string;
     search_results: StreamerData[];
     methodology: Section;
     roadmap: FeaturedSection;
-    data_source: string;
-    opt_out_text: string;
-    footer_links: InfoLink[];
+    footer_content: PageFooterContent;
 };
 
 export default async function Home() {
@@ -49,22 +46,9 @@ export default async function Home() {
 
     const content: HomePageContent = await response.json();
 
-    const link_styles = "underline text-blue-500 hover:text-white";
-    const opt_out_link = <Link className={link_styles} href={`/optout`} rel="nofollow">{content.opt_out_text}</Link>;
-
     return (
         <Fragment>
-            {/* Header */}
-            <header className="pt-10 pb-12 px-6 bg-brand-blue text-white shadow-sm shadow-gray-200">
-                <div className="max-w-[1000] mx-auto">
-                    <div className="flex justify-end mb-2">
-                        <AuthStatus user={user} />
-                    </div>
-                    <h1 className="text-3xl font-bold">{content.title}</h1>
-                    <p className="mt-6 text-lg">{content.description}</p>
-                    <p className="mt-6 text-sm opacity-70">{content.info}</p>
-                </div>
-            </header>
+            <PageHeader user={user} content={content.header_content}></PageHeader>
 
             {/* Main */}
             <main className="w-full">
@@ -105,30 +89,7 @@ export default async function Home() {
                 </section>
             </main>
 
-            {/* Footer */}
-            <footer className="pt-16 pb-12 px-6 bg-brand-blue text-white">
-                <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
-                    {content.footer_links.map((one_link, index) => (
-                        one_link.is_internal
-                            ? <Link key={`footer-link-${index}`}
-                                href={one_link.url}
-                                className={`p-2 mr-4${link_styles}`}
-                                rel={one_link.nofollow ? 'nofollow' : undefined}>{one_link.text}</Link>
-                            : <a key={`footer-link-${index}`}
-                                href={one_link.url}
-                                className={`p-2 mr-4${link_styles}`}
-                                rel={one_link.nofollow ? 'nofollow' : undefined}>{one_link.text}</a>
-                    ))}
-                </section>
-                <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
-                    <div className="p-2">{content.data_source.split('%opt_out_link%').map((part, i, arr) => (
-                        <Fragment key={i}>
-                            {part}
-                            {i < arr.length - 1 && opt_out_link}
-                        </Fragment>
-                    ))}</div>
-                </section>
-            </footer>
+            <PageFooter content={content.footer_content}></PageFooter>
         </Fragment>
     );
 }
