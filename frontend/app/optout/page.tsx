@@ -56,7 +56,7 @@ export default async function OptOutPage({ searchParams }: { searchParams: Promi
                         ? (
                             <Fragment>
                                 <div>{content.already_optout}</div>
-                                <Link href="/" className="block text-center text-blue-500 hover:text-blue-400 underline">{content.return_home}</Link>
+                                <Link href="/" className="block text-center text-blue-700 hover:text-blue-500 underline">{content.return_home}</Link>
                             </Fragment>
                         ) : (
                             <Fragment>

@@ -29,7 +29,7 @@ export function OptOutSuccess({ content, isNewOptOut }: { content: OptOutSuccess
                             <div>{content.already_optout}</div>
                         </Fragment>
                 }
-                <Link href="/"className="block text-center text-blue-500 hover:text-blue-400 underline">
+                <Link href="/"className="block text-center text-blue-700 hover:text-blue-500 underline">
                     {content.return_home}
                 </Link>
             </div>

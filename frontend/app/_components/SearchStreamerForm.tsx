@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useState } from "react";
+import { CurrentUser } from "../_lib/auth";
 
 export type FieldData = {
     v: string;
@@ -32,7 +33,7 @@ export type SearchFormData = {
     cta_link_text: string;
 };
 
-export function SearchStreamerForm({ search_form }: { search_form: SearchFormData }) {
+export function SearchStreamerForm({ search_form, user }: { search_form: SearchFormData; user: CurrentUser | null }) {
     const [formData, setFormData] = useState<Record<string, any>>(() => {
         const initial: Record<string, any> = {};
         for (const one_filter of search_form.filters) {
@@ -184,20 +185,26 @@ export function SearchStreamerForm({ search_form }: { search_form: SearchFormDat
                         ))}
                     </div>
                     <fieldset className="flex justify-center col-span-1 items-start">
-                        <button type="submit" disabled={true}
-                            className="bg-gray-300 px-8 py-2 rounded-sm text-white hover:bg-gray-300 cursor-not-allowed shadow-sm shadow-gray-200 min-w-40"
+                        <button type="submit" disabled={!user}
+                            className={!user
+                                ? "bg-gray-300 px-8 py-2 rounded-sm text-white hover:bg-gray-300 cursor-not-allowed shadow-sm shadow-gray-200 min-w-40"
+                                : "bg-blue-600 px-8 py-2 rounded-sm text-white hover:bg-blue-700 cursor-pointer shadow-sm shadow-gray-200 min-w-40"
+                            }
                         >{search_form.button_text}</button>
                     </fieldset>
                 </div>
-                <div className="col-span-1 lg:col-span-3 md:col-span-2 text-orange-600 mt-4 border-t border-orange-500 pt-4">
-                    <div>
-                        <span className="font-bold uppercase">{search_form.demo_title}</span>
-                        <span> {search_form.demo_note}</span>
+                {!user
+                    ? <div className="col-span-1 lg:col-span-3 md:col-span-2 text-orange-600 mt-4 border-t border-orange-500 pt-4">
+                        <div>
+                            <span className="font-bold uppercase">{search_form.demo_title}</span>
+                            <span> {search_form.demo_note}</span>
+                        </div>
+                        <div className="text-center mt-4">
+                            <Link href="/login" className="underline text-blue-700 hover:text-blue-500 ml-2">{search_form.cta_link_text}</Link>
+                        </div>
                     </div>
-                    <div className="text-center mt-4">
-                        <Link href="/login" className="underline text-blue-700 hover:text-blue-500 ml-2">{search_form.cta_link_text}</Link>
-                    </div>
-                </div>
+                    : null
+                }
             </form>
         </div>
     );

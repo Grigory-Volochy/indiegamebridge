@@ -8,6 +8,13 @@ type Section = {
     description: string;
 };
 
+type InfoLink = {
+    text: string;
+    url: string;
+    nofollow: number;
+    is_internal: number;
+}
+
 type FeaturedSection = {
     title: string;
     description: string;
@@ -26,6 +33,7 @@ type HomePageContent = {
     roadmap: FeaturedSection;
     data_source: string;
     opt_out_text: string;
+    footer_links: InfoLink[];
 };
 
 export default async function Home() {
@@ -41,7 +49,8 @@ export default async function Home() {
 
     const content: HomePageContent = await response.json();
 
-    const opt_out_link = <Link className="underline text-blue-400 hover:text-blue-300" href={`/optout`} rel="nofollow" title="Opt out">{content.opt_out_text}</Link>;
+    const link_styles = "underline text-blue-500 hover:text-white";
+    const opt_out_link = <Link className={link_styles} href={`/optout`} rel="nofollow">{content.opt_out_text}</Link>;
 
     return (
         <Fragment>
@@ -71,7 +80,7 @@ export default async function Home() {
                 {/* Demo Search */}
                 <section className="px-6">
                     <div className="max-w-[1000] mx-auto pt-4 pb-16">
-                        <SearchStreamerForm search_form={content.search_form}></SearchStreamerForm>
+                        <SearchStreamerForm search_form={content.search_form} user={user}></SearchStreamerForm>
                         <SearchStreamerResultsList search_results={content.search_results} search_results_title={content.search_results_title}></SearchStreamerResultsList>
                     </div>
                 </section>
@@ -99,7 +108,20 @@ export default async function Home() {
             {/* Footer */}
             <footer className="pt-16 pb-12 px-6 bg-brand-blue text-white">
                 <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
-                    <div>{content.data_source.split('%opt_out_link%').map((part, i, arr) => (
+                    {content.footer_links.map((one_link, index) => (
+                        one_link.is_internal
+                            ? <Link key={`footer-link-${index}`}
+                                href={one_link.url}
+                                className={`p-2 mr-4${link_styles}`}
+                                rel={one_link.nofollow ? 'nofollow' : undefined}>{one_link.text}</Link>
+                            : <a key={`footer-link-${index}`}
+                                href={one_link.url}
+                                className={`p-2 mr-4${link_styles}`}
+                                rel={one_link.nofollow ? 'nofollow' : undefined}>{one_link.text}</a>
+                    ))}
+                </section>
+                <section className="max-w-[1000] mx-auto text-gray-300 font-thin text-sm">
+                    <div className="p-2">{content.data_source.split('%opt_out_link%').map((part, i, arr) => (
                         <Fragment key={i}>
                             {part}
                             {i < arr.length - 1 && opt_out_link}

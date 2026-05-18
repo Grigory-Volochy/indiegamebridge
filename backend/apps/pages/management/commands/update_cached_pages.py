@@ -319,16 +319,19 @@ class Command(BaseCommand):
                     "text": "Request removal",
                     "url": "/optout",
                     "nofollow": 1,
+                    "is_internal": 1,
                 },
                 {
                     "text": "GitHub",
                     "url": "/https://github.com/IndieGameBridge/indiegamebridge",
                     "nofollow": 1,
+                    "is_internal": 0,
                 },
                 {
                     "text": "Contact",
                     "url": "/contact",
                     "nofollow": 1,
+                    "is_internal": 1,
                 }
             ],
         }

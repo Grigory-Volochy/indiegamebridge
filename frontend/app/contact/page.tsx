@@ -27,7 +27,7 @@ export default async function ContactPage() {
             <div className="max-w-md mx-auto py-24">
                 <h1 className="text-2xl font-bold mb-6 text-center">{content.title}</h1>
                 <p className="text-gray-600 mb-8 text-center">{content.body}</p>
-                <Link href="/" className="block text-center text-blue-500 hover:text-blue-400 underline">{content.return_home}</Link>
+                <Link href="/" className="block text-center text-blue-700 hover:text-blue-500 underline">{content.return_home}</Link>
             </div>
         </main>
     );

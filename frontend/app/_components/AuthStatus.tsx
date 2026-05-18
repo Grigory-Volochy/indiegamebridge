@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Fragment } from "react/jsx-runtime";
 
 export type AuthStatusProps = {
     user: {
@@ -19,14 +20,6 @@ function readCookie(name: string): string {
 export function AuthStatus({ user }: AuthStatusProps) {
     const router = useRouter();
 
-    if (!user) {
-        return (
-            <a href="/login" className="text-sm underline hover:opacity-80">
-                Log in
-            </a>
-        );
-    }
-
     async function handleLogout() {
         await fetch("/auth/logout/", {
             method: "POST",
@@ -37,15 +30,14 @@ export function AuthStatus({ user }: AuthStatusProps) {
     }
 
     return (
-        <div className="text-sm flex items-center gap-x-8 gap-y-2 flex-col md:flex-row lg:flex-row">
-            <span className="opacity-80">Hi, {user.display_name}</span>
-            <button
-                type="button"
-                onClick={handleLogout}
-                className="underline hover:opacity-80 cursor-pointer text-blue-400 hover:text-blue-300"
-            >
-                Log out
-            </button>
+        <div className="flex items-center gap-x-8 gap-y-2 flex-col md:flex-row lg:flex-row">
+            {!user
+                ? <a href="/login" className="underline hover:opacity-80 cursor-pointer text-blue-500 hover:text-white">Log in</a>
+                : <Fragment>
+                        <span className="opacity-80">Hi, {user.display_name}</span>
+                        <button type="button" onClick={handleLogout} className="underline hover:opacity-80 cursor-pointer text-blue-500 hover:text-white">Log out</button>
+                    </Fragment>
+            }
         </div>
     );
 }
